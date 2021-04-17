@@ -26,16 +26,11 @@ class CLFRates:
         tpr = np.round(tp / (tp + fn), round)
         fnr = np.round(fn / (fn + tp), round)
         fpr = np.round(fp / (fp + tn), round)
+        acc = (tn + tp) / len(y)
         
-        # Setting the class attributes
-        self.tnr = tnr
-        self.tpr = tpr
-        self.fnr = fnr
-        self.fpr = fpr
-        self.tn = tn
-        self.fn = fn
-        self.fp = fp
-        self.tp = tp
+        self.tn, self.fn, self.tp, self.fp = tn, fn, tp, fp
+        self.tpr, self.fpr, self.tnr, self.fnr = tpr, fpr, tnr, fnr
+        self.acc = acc
         self.tab = tab
 
 # Importing some test data
@@ -61,22 +56,23 @@ def balance(y, y_, a):
     rates = CLFRates(y, y_)
     
     # Setting up the linear program
-    dpr = rates.fpr - rates.tpr
+    s = rates.acc
+    e = 1 - s
     p1 = np.sum(a) / len(a)
     p0 = 1 - p1
-    obj = np.array([dpr * p0, 
-                    -dpr * p0, 
-                    dpr * p1, 
-                    -dpr * p1])
+    obj = np.array([(s - e) * p0, 
+                    (e - s) * p0, 
+                    (s - e) * p1, 
+                    (e - s) * p1])
     obj_bounds = [(0, 1)]
-    tpr_b_coef = np.array([1 - a0.tpr,
+    tpr_b_coef = np.array([a0.fnr,
                            a0.tpr,
-                           1 - a1.tpr,
-                           a1.tpr])
-    fpr_b_coef = np.array([a0.fpr,
-                           1 - a0.fpr,
-                           a1.fpr,
-                           1 - a1.fpr])
+                           -a1.fnr,
+                           -a1.tpr])
+    fpr_b_coef = np.array([a0.tnr,
+                           a0.fpr,
+                           -a1.tnr,
+                           -a1.fpr])
     A_eq = np.vstack((tpr_b_coef, fpr_b_coef))
     b_eq = np.array([0, 0])
     
@@ -85,6 +81,11 @@ def balance(y, y_, a):
                               bounds=obj_bounds,
                               A_eq=A_eq,
                               b_eq=b_eq)
-    return A_eq, opt
+    return {'s':s,
+            'e':e,
+            'p1':p1,
+            'p0':p0,
+            'obj':obj,
+            'opt':opt}
 
 
