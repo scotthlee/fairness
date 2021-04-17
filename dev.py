@@ -60,10 +60,10 @@ def balance(y, y_, a):
     e = 1 - s
     p1 = np.sum(a) / len(a)
     p0 = 1 - p1
-    obj = np.array([(s - e) * p0, 
-                    (e - s) * p0, 
-                    (s - e) * p1, 
-                    (e - s) * p1])
+    obj_coefs = np.array([(s - e) * p0, 
+                          (e - s) * p0,
+                          (s - e) * p1,
+                          (e - s) * p1])
     obj_bounds = [(0, 1)]
     tpr_b_coef = np.array([a0.fnr,
                            a0.tpr,
@@ -77,7 +77,7 @@ def balance(y, y_, a):
     roc_bounds = np.array([0, 0])
     
     # Running the optimization
-    opt = sp.optimize.linprog(c=obj,
+    opt = sp.optimize.linprog(c=obj_coefs,
                               bounds=obj_bounds,
                               A_eq=roc_coefs,
                               b_eq=roc_bounds)
