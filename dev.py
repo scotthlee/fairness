@@ -73,14 +73,14 @@ def balance(y, y_, a):
                            a0.fpr,
                            -a1.tnr,
                            -a1.fpr])
-    A_eq = np.vstack((tpr_b_coef, fpr_b_coef))
-    b_eq = np.array([0, 0])
+    roc_coefs = np.vstack((tpr_b_coef, fpr_b_coef))
+    roc_bounds = np.array([0, 0])
     
     # Running the optimization
     opt = sp.optimize.linprog(c=obj,
                               bounds=obj_bounds,
-                              A_eq=A_eq,
-                              b_eq=b_eq)
+                              A_eq=roc_coefs,
+                              b_eq=roc_bounds)
     return {'s':s,
             'e':e,
             'p1':p1,
