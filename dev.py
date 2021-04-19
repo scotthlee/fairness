@@ -29,8 +29,6 @@ class CLFRates:
         self.fnr = np.round(fn / (fn + tp), round)
         self.fpr = np.round(fp / (fp + tn), round)
         self.acc = (tn + tp) / len(y)
-        
-        return
 
 
 def roc_coords(y, y_, round=4):
@@ -46,6 +44,13 @@ def roc_coords(y, y_, round=4):
     fpr = np.round(fp / (fp + tn), round)
     
     return (fpr, tpr)
+
+
+def group_roc_coords(y, y_, a, round=4):
+    groups = np.unique(a)
+    group_ids = [np.where(a ==g)[0] for g in groups]
+    coords = [roc_coords(y[i], y_[i], round) for i in group_ids]
+    return dict(zip(groups, coords))
 
 
 def pred_from_pya(y_, a, pya):
