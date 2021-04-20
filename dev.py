@@ -6,6 +6,7 @@ import itertools
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score, recall_score
 from sklearn.ensemble import RandomForestClassifier
+from matplotlib import pyplot as plt
 from itertools import combinations
 
 
@@ -31,6 +32,10 @@ class CLFRates:
         self.acc = (tn + tp) / len(y)
 
 
+def from_top(roc_point, round=4):
+    d = np.sqrt(roc_point[0]**2 + (roc_point[1] - 1)**2)
+    return d
+
 def roc_coords(y, y_, round=4):
     # Getting hte counts
     tab = pd.crosstab(y_, y)
@@ -50,21 +55,39 @@ def group_roc_coords(y, y_, a, round=4):
     groups = np.unique(a)
     group_ids = [np.where(a ==g)[0] for g in groups]
     coords = [roc_coords(y[i], y_[i], round) for i in group_ids]
-    return dict(zip(groups, coords))
+    fprs = [c[0] for c in coords]
+    tprs = [c[1] for c in coords]
+    return {'groups': groups,
+            'fprs': fprs,
+            'tprs': tprs}
 
 
-def pred_from_pya(y_, a, pya):
+def pred_from_pya(y_, a, pya, binom=False):
+    # Getting the groups and making the initially all-zero predictor
     groups = np.unique(a)
     out = np.zeros(y_.shape[0])
+    
     for i, g in enumerate(groups):
+        # Pulling the fitted switch probabilities for the group
         p = pya[i]
+        
+        # Indices in the group from which to choose swaps
         pos = np.where((a == g) & (y_ == 1))[0]
         neg = np.where((a ==  g) & (y_ == 0))[0]
-        out[neg] = np.random.binomial(1, p[0], len(neg))
-        out[pos] = np.random.binomial(1, p[1], len(pos))
+        
+        if not binom:
+            # Randomly picking the positive predictions
+            pos_samp = np.random.choice(pos, int(p[1] * len(pos)))
+            neg_samp = np.random.choice(neg, int(p[0] * len(neg)))
+            samp = np.concatenate((pos_samp, neg_samp)).flatten()
+            out[samp] = 1
+        else:
+            # Getting the 1s from a binomial draw for extra randomness 
+            out[pos] = np.random.binomial(1, p[1], len(pos))
+            out[neg] = np.random.binomial(1, p[0], len(neg))
     
     return out.astype(np.uint8)
-    
+
 
 class PredictionBalancer:
     def __init__(self, 
@@ -75,6 +98,7 @@ class PredictionBalancer:
         
         self.y = y
         self.y_ = y_
+        self.y_adj = None
         self.a = a
         self.groups = np.unique(a)
         
@@ -147,19 +171,51 @@ class PredictionBalancer:
         
         return
     
-    def predict(self):
+    def predict(self, binom=True, return_preds=False):
         pya = self.opt.x.reshape(len(self.groups), 2)
-        adj = pred_from_pya(self.y_, self.a, pya)
-        return adj
+        adj = pred_from_pya(self.y_, self.a, pya, binom)
+        self.y_adj = adj
+        if return_preds:
+            return adj
     
-    def plot(self):
-        pass
+    def plot(self, add_lines=False):
+        # Plotting the unadjusted ROC coordinates
+        orig_coords = group_roc_coords(self.y, self.y_, self.a)
+        plt.scatter(orig_coords['fprs'],
+                    orig_coords['tprs'], 
+                    color='red')
+        plt.xlim((0, 1))
+        plt.ylim((0, 1))
         
+        # Optionally adding the adjusted ROC coordinates
+        if self.y_adj is not None:
+            adj_coords = group_roc_coords(self.y, self.y_adj, self.a)
+            plt.scatter(adj_coords['fprs'], 
+                        adj_coords['tprs'],
+                        color='blue')
+            if add_lines:
+                pass
+        
+        plt.show()
 
 
 class ROCBalancer:
     def __init__(self):
-        pass
+        pasself.y = y
+        self.y_ = y_
+        self.a = a
+        self.groups = np.unique(a)
+        
+        # Getting the row numbers for each group
+        group_ids = [np.where(a == g)[0] for g in self.groups]
+        
+        # Getting the proportion for each group
+        self.p = [np.round(len(cols) / len(y), round) for cols in group_ids]
+        
+        # Calcuating the groupwise classification rates
+        group_rates = [CLFRates(y[i], y_[i]) for i in group_ids]
+        self.group_rates = dict(zip(self.groups, group_rates))
+        self.overall_rates = CLFRates(y, y_)
 
 
 # Importing some test data
@@ -171,13 +227,15 @@ records = records[(records.race == 'Black') |
                   (records.race == 'Asian')]
 
 # Setting the variables for the joint distribution
-pcr = records.pcr_pos.values
-taste = records.tastesmell_combo.values
-race_bin = np.array(records.race == 'White', dtype=np.uint8)
-race = records.race.values
+pcr = np.repeat(records.pcr_pos.values, 10)
+taste = np.repeat(records.tastesmell_combo.values, 10)
+race_bin = np.repeat(np.array(records.race == 'White', 
+                              dtype=np.uint8), 10)
+race = np.repeat(records.race.values, 10)
 
 # Testing the balancer
-x = PredictionBalancer(pcr, taste, race)
-x.fit()
-y_adj = x.predict()
+pb = PredictionBalancer(pcr, taste, race)
+pb.fit()
+pb.predict()
+pb.plot()
 
