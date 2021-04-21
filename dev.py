@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import scipy as sp
 import itertools
+import seaborn as sbn
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score, recall_score
@@ -57,9 +58,9 @@ def group_roc_coords(y, y_, a, round=4):
     coords = [roc_coords(y[i], y_[i], round) for i in group_ids]
     fprs = [c[0] for c in coords]
     tprs = [c[1] for c in coords]
-    return {'groups': groups,
-            'fprs': fprs,
-            'tprs': tprs}
+    out = pd.DataFrame([groups, fprs, tprs]).transpose()
+    out.columns = ['group', 'fpr', 'tpr']
+    return out
 
 
 def pred_from_pya(y_, a, pya, binom=False):
@@ -204,28 +205,33 @@ class PredictionBalancer:
     def plot(self, add_lines=False):
         # Plotting the unadjusted ROC coordinates
         orig_coords = group_roc_coords(self.y, self.y_, self.a)
-        plt.scatter(orig_coords['fprs'],
-                    orig_coords['tprs'], 
-                    color='red')
+        plt.scatter(x=orig_coords.fpr,
+                    y=orig_coords.tpr, 
+                    color='red',
+                    alpha=0.8)
         plt.xlim((0, 1))
         plt.ylim((0, 1))
         
-        # Optionally adding the adjusted ROC coordinates
-        if self.y_adj is not None:
-            adj_coords = group_roc_coords(self.y, self.y_adj, self.a)
-            plt.scatter(adj_coords['fprs'], 
-                        adj_coords['tprs'],
-                        color='blue')
-            if add_lines:
-                pass
+        # Plotting the adjusted coordinates
+        adj_coords = group_roc_coords(self.y, self.y_adj, self.a)
+        plt.scatter(x=adj_coords.fpr, 
+                    y=adj_coords.tpr, 
+                    color='blue', 
+                    alpha=0.8)
         
+        # Adding lines to show the LP geometry
+        if add_lines:
+            pass
         plt.show()
 
 
-class ROCBalancer:
+class ProbabilityBalancer:
     def __init__(self):
-        pasself.y = y
-        self.y_ = y_
+        pass
+    
+    def fit(y, probs, a, return_optima=True):
+        self.y = y
+        self.probs = probs
         self.a = a
         self.groups = np.unique(a)
         
@@ -251,6 +257,8 @@ records = records[(records.race == 'Black') |
 
 # Setting the variables for the joint distribution
 pcr = np.repeat(records.pcr_pos.values, 10)
+cough = np.repeat(records.cough.values, 10)
+fever = np.repeat(records.fever_chills.values, 10)
 taste = np.repeat(records.tastesmell_combo.values, 10)
 race_bin = np.repeat(np.array(records.race == 'White', 
                               dtype=np.uint8), 10)
