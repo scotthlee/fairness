@@ -73,12 +73,16 @@ def pred_from_pya(y_, a, pya, binom=False):
         
         # Indices in the group from which to choose swaps
         pos = np.where((a == g) & (y_ == 1))[0]
-        neg = np.where((a ==  g) & (y_ == 0))[0]
+        neg = np.where((a == g) & (y_ == 0))[0]
         
         if not binom:
             # Randomly picking the positive predictions
-            pos_samp = np.random.choice(pos, int(p[1] * len(pos)))
-            neg_samp = np.random.choice(neg, int(p[0] * len(neg)))
+            pos_samp = np.random.choice(a=pos, 
+                                        size=int(p[1] * len(pos)), 
+                                        replace=False)
+            neg_samp = np.random.choice(a=neg, 
+                                        size=int(p[0] * len(neg)),
+                                        replace=False)
             samp = np.concatenate((pos_samp, neg_samp)).flatten()
             out[samp] = 1
         else:
@@ -90,15 +94,20 @@ def pred_from_pya(y_, a, pya, binom=False):
 
 
 class PredictionBalancer:
-    def __init__(self, 
-                 y, 
-                 y_, 
-                 a,
-                 round=4):
+    def __init__(self):
+        pass
         
+    def fit(self,
+            y,
+            y_,
+            a,
+            round=4,
+            return_optima=True,
+            binom=False):
+        
+        # Setting the basic attributes
         self.y = y
         self.y_ = y_
-        self.y_adj = None
         self.a = a
         self.groups = np.unique(a)
         
@@ -112,9 +121,8 @@ class PredictionBalancer:
         group_rates = [CLFRates(y[i], y_[i]) for i in group_ids]
         self.group_rates = dict(zip(self.groups, group_rates))
         self.overall_rates = CLFRates(y, y_)
-    
-    def fit(self):
-        # Pulling things from the class
+        
+        # Getting the overall error rates and group proportions
         s = self.overall_rates.acc
         e = 1 - s
         p = self.p
@@ -168,15 +176,30 @@ class PredictionBalancer:
                                        bounds=obj_bounds,
                                        A_eq=roc_coefs,
                                        b_eq=roc_bounds)
+        self.loss = np.round(self.opt.fun, round) + 1
+        self.pya = self.opt.x.reshape(len(self.groups), 2)
         
-        return
+        # Setting the adjusted predictions
+        self.y_adj = pred_from_pya(y_=self.y_, 
+                                   a=self.a,
+                                   pya=self.pya, 
+                                   binom=binom)
+        
+        # Optionally returning the optimal ROC and loss
+        p0, p1 = self.pya[0][0], self.pya[0][1]
+        group = self.group_rates[self.groups[0]]
+        fpr = (group.tnr * p0) + (group.fpr * p1)
+        tpr = (group.fnr * p0) + (group.tpr * p1)
+        self.roc = (np.round(fpr, round), np.round(tpr, round))
+        
+        if return_optima:                
+            return {'loss': self.loss, 'roc': self.roc}
     
-    def predict(self, binom=True, return_preds=False):
-        pya = self.opt.x.reshape(len(self.groups), 2)
-        adj = pred_from_pya(self.y_, self.a, pya, binom)
-        self.y_adj = adj
-        if return_preds:
-            return adj
+    def predict(self, y_, a, 
+                binom=False, 
+                return_preds=False):
+        adj = pred_from_pya(y_, a, self.pya, binom)
+        return adj
     
     def plot(self, add_lines=False):
         # Plotting the unadjusted ROC coordinates
@@ -234,8 +257,7 @@ race_bin = np.repeat(np.array(records.race == 'White',
 race = np.repeat(records.race.values, 10)
 
 # Testing the balancer
-pb = PredictionBalancer(pcr, taste, race)
-pb.fit()
-pb.predict()
+pb = PredictionBalancer()
+pb.fit(pcr, taste, race)
 pb.plot()
 
