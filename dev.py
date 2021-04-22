@@ -124,15 +124,16 @@ class PredictionBalancer:
         group_rates = [CLFRates(y[i], y_[i]) for i in group_ids]
         self.group_rates = dict(zip(self.groups, group_rates))
         dr = [(g.pr - g.nr) for g in group_rates]
-        self.overall_rates = CLFRates(y, y_)
         
         # Getting the overall error rates and group proportions
+        self.overall_rates = CLFRates(y, y_)
         s = self.overall_rates.acc
         e = 1 - s
         p = self.p
         
         # Setting up the coefficients for the objective function
-        obj_coefs = np.array([[(e - s) * r, (s - e) * r]
+        obj_coefs = np.array([[(e - s) * r, 
+                               (s - e) * r]
                              for r in dr]).flatten()
         obj_bounds = [(0, 1)]
         
@@ -180,7 +181,6 @@ class PredictionBalancer:
                                        bounds=obj_bounds,
                                        A_eq=roc_coefs,
                                        b_eq=roc_bounds)
-        self.loss = 1 + 2*e + self.opt.fun
         pya = self.opt.x.reshape(len(self.groups), 2)
         self.pya = np.round(pya, round)
         
@@ -189,6 +189,7 @@ class PredictionBalancer:
                                    a=self.a,
                                    pya=self.pya, 
                                    binom=binom)
+        self.loss = 1 - CLFRates(self.y, self.y_adj).acc
         
         # Optionally returning the optimal ROC and loss
         p0, p1 = self.pya[0][0], self.pya[0][1]
