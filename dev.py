@@ -123,18 +123,20 @@ class PredictionBalancer:
         # Calcuating the groupwise classification rates
         group_rates = [CLFRates(y[i], y_[i]) for i in group_ids]
         self.group_rates = dict(zip(self.groups, group_rates))
-        dr = [(g.pr - g.nr) for g in group_rates]
+        #dr = [(g.pr - g.nr)*self.p[i] for i, g in enumerate(group_rates)]
+        dr = [(g.nr*self.p[i], g.pr*self.p[i]) 
+              for i, g in enumerate(group_rates)]
         
         # Getting the overall error rates and group proportions
         self.overall_rates = CLFRates(y, y_)
         s = self.overall_rates.acc
         e = 1 - s
-        p = self.p
         
         # Setting up the coefficients for the objective function
-        obj_coefs = np.array([[(e - s) * r, 
-                               (s - e) * r]
+        obj_coefs = np.array([[(s - e) * r[0], 
+                               (e - s) * r[1]]
                              for r in dr]).flatten()
+        print(obj_coefs)
         obj_bounds = [(0, 1)]
         
         # Generating the pairs for comparison
@@ -189,9 +191,14 @@ class PredictionBalancer:
                                    a=self.a,
                                    pya=self.pya, 
                                    binom=binom)
-        self.loss = 1 - CLFRates(self.y, self.y_adj).acc
         
-        # Optionally returning the optimal ROC and loss
+        # Getting theoretical (no rounding) and actual (with rounding) loss
+        self.actual_loss = 1 - CLFRates(self.y, self.y_adj).acc
+        cmin = self.opt.fun
+        tl = cmin + (e*self.overall_rates.nr) + (s*self.overall_rates.pr)
+        self.theoretical_loss = tl
+        
+        # Calculating the theoretical balance point in ROC space
         p0, p1 = self.pya[0][0], self.pya[0][1]
         group = self.group_rates[self.groups[0]]
         fpr = (group.tnr * p0) + (group.fpr * p1)
@@ -199,7 +206,7 @@ class PredictionBalancer:
         self.roc = (np.round(fpr, round), np.round(tpr, round))
         
         if return_optima:                
-            return {'loss': self.loss, 'roc': self.roc}
+            return {'loss': self.theoretical_loss, 'roc': self.roc}
     
     def predict(self, y_, a, binom=False):
         adj = pred_from_pya(y_, a, self.pya, binom)
