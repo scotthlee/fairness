@@ -12,6 +12,92 @@ from multiprocessing import Pool
 from copy import deepcopy
 
 
+class CLFRates:
+    def __init__(self,
+                 y, 
+                 y_,
+                 round=4):
+        # Doing a crosstab to save some time
+        self.tab = pd.crosstab(y_, y)
+        
+        # Getting the basic counts
+        tn = self.tab.iloc[0, 0]
+        fn = self.tab.iloc[0, 1]
+        fp = self.tab.iloc[1, 0]
+        tp = self.tab.iloc[1, 1]
+        
+        # Calculating the rates
+        self.pr = np.round((tp + fp) / len(y), round)
+        self.nr = np.round((tn + fn) / len(y), round)
+        self.tnr = np.round(tn / (tn + fp), round)
+        self.tpr = np.round(tp / (tp + fn), round)
+        self.fnr = np.round(fn / (fn + tp), round)
+        self.fpr = np.round(fp / (fp + tn), round)
+        self.acc = (tn + tp) / len(y)
+
+
+def from_top(roc_point, round=4):
+    d = np.sqrt(roc_point[0]**2 + (roc_point[1] - 1)**2)
+    return d
+
+
+def roc_coords(y, y_, round=4):
+    # Getting hte counts
+    tab = pd.crosstab(y_, y)
+    tn = tab.iloc[0, 0]
+    fn = tab.iloc[0, 1]
+    fp = tab.iloc[1, 0]
+    tp = tab.iloc[1, 1]
+    
+    # Calculating the rates
+    tpr = np.round(tp / (tp + fn), round)
+    fpr = np.round(fp / (fp + tn), round)
+    
+    return (fpr, tpr)
+
+
+def group_roc_coords(y, y_, a, round=4):
+    groups = np.unique(a)
+    group_ids = [np.where(a ==g)[0] for g in groups]
+    coords = [roc_coords(y[i], y_[i], round) for i in group_ids]
+    fprs = [c[0] for c in coords]
+    tprs = [c[1] for c in coords]
+    out = pd.DataFrame([groups, fprs, tprs]).transpose()
+    out.columns = ['group', 'fpr', 'tpr']
+    return out
+
+
+def pred_from_pya(y_, a, pya, binom=False):
+    # Getting the groups and making the initially all-zero predictor
+    groups = np.unique(a)
+    out = np.zeros(y_.shape[0])
+    
+    for i, g in enumerate(groups):
+        # Pulling the fitted switch probabilities for the group
+        p = pya[i]
+        
+        # Indices in the group from which to choose swaps
+        pos = np.where((a == g) & (y_ == 1))[0]
+        neg = np.where((a == g) & (y_ == 0))[0]
+        
+        if not binom:
+            # Randomly picking the positive predictions
+            pos_samp = np.random.choice(a=pos, 
+                                        size=int(p[1] * len(pos)), 
+                                        replace=False)
+            neg_samp = np.random.choice(a=neg, 
+                                        size=int(p[0] * len(neg)),
+                                        replace=False)
+            samp = np.concatenate((pos_samp, neg_samp)).flatten()
+            out[samp] = 1
+        else:
+            # Getting the 1s from a binomial draw for extra randomness 
+            out[pos] = np.random.binomial(1, p[1], len(pos))
+            out[neg] = np.random.binomial(1, p[0], len(neg))
+    
+    return out.astype(np.uint8)
+
+
 # Quick function for thresholding probabilities
 def threshold(probs, cutoff=.5):
     return np.array(probs >= cutoff).astype(np.uint8)
@@ -214,51 +300,6 @@ def jackknife_metrics(targets,
     means = scores.mean()
     
     return scores, means
-
-
-def invert_BCA(q, b, acc, lower=True):
-    if np.isnan(q):
-        return q
-    if np.any(q >= 1):
-        q /= 100
-    z = norm.ppf(q)
-    numer = z - 2*b - z*b*acc - b**2*acc
-    denom = 1 + b*acc + z*acc
-    if lower:
-        return 2 * norm.cdf(numer / denom)
-    else:
-        return 2 * (1 - norm.cdf(numer / denom))
-
-
-def BCA_pval(bca, null=0.0):
-    scores = bca.scores
-    n_cols = bca.scores.shape[1]
-    
-    # Making the vector of null values
-    if type(null) == type(0.0):
-        null = np.array([null] * n_cols)
-    
-    # Figuring out which nulls exist in the bootstrap data
-    good_nulls = []
-    for i in range(n_cols):
-        col = scores.iloc[:, i]
-        good_nulls.append(col.min() <= null[i] <= col.max())
-    
-    # Getting the percentile for each null
-    null_qs = np.array([percentileofscore(bca.scores.iloc[:, i], null[i]) 
-               if good_nulls[i] else np.nan for i in range(n_cols)]) / 100
-    
-    # Figuring out whether to look at the lower or upper quantile
-    lower = [q <= .5 if not np.isnan(q) else q for q in null_qs]
-    
-    # Getting the p-value associated with each null percentile
-    pvals = np.array([invert_BCA(null_qs[i],
-                                 bca.b[i],
-                                 bca.acc[i],
-                                 lower=lower[i])
-                      for i in range(n_cols)])
-    
-    return pvals, good_nulls, null_qs, lower
 
 
 def boot_stat_cis(stat,
@@ -738,17 +779,6 @@ def roc_cis(rocs, alpha=0.05, round=2):
     return quant_df
 
 
-# Returns the maximum value of metric X that achieves a value of
-# at least yval on metric Y
-def x_at_y(x, y, yval, grid):
-    y = np.array(grid[y])
-    x = np.array(grid[x])
-    assert np.sum(y >= yval) > 0, 'No y vals meet the minimum'
-    good_y = np.where(y >= yval)[0]
-    best_x = np.max(x[good_y])
-    return best_x
-
-
 # Converts a boot_cis['cis'] object to a single row
 def merge_cis(c, round=4, mod_name=''):
     str_cis = c.round(round).astype(str)
@@ -770,26 +800,6 @@ def merge_ci_list(l, mod_names=None, round=4):
     return pd.concat(merged_cis, axis=0)
 
 
-def unique_combo(c):
-    if len(np.intersect1d(c[0], c[1])) == 0:
-        return c
-    else:
-        return None
-
-
-def prop_table(y, pred, axis=0, round=2):
-    tab = pd.crosstab(y, pred)
-    if axis == 1:
-        tab = tab.transpose()
-        out = tab / np.sum(tab, axis=0)
-        out = out.transpose()
-    else:
-        out = tab / np.sum(tab, axis=0)
-    if round is not None:
-        out = np.round(out, round)
-    return out
-        
-
 def risk_ratio(y, pred, round=2):
     props = np.array(prop_table(y, pred, round=None))
     rr = props[1, 1] / props[1, 0]
@@ -804,19 +814,4 @@ def odds_ratio(y, pred, round=2):
     if round is not None:
         OR = np.round(OR, round)
     return OR
-
-
-def onehot_matrix(y, sparse=False):
-    if not sparse:
-        y_mat = np.zeros((y.shape[0], len(np.unique(y))))
-        for row, col in enumerate(y):
-            y_mat[row, col] = 1
-    return y_mat
-
-
-def max_probs(arr, maxes=None, axis=1):
-    if maxes is None:
-        maxes = np.argmax(arr, axis=axis)
-    out = [arr[i, maxes[i]] for i in range(arr.shape[0])]
-    return np.array(out)
 
