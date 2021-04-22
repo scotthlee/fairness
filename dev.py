@@ -5,7 +5,7 @@ import itertools
 import seaborn as sbn
 
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import f1_score, recall_score
+from sklearn.metrics import f1_score, recall_score, roc_curve
 from sklearn.ensemble import RandomForestClassifier
 from matplotlib import pyplot as plt
 from itertools import combinations
@@ -15,7 +15,7 @@ class CLFRates:
     def __init__(self,
                  y, 
                  y_,
-                 round=2):
+                 round=4):
         # Doing a crosstab to save some time
         self.tab = pd.crosstab(y_, y)
         
@@ -26,6 +26,8 @@ class CLFRates:
         tp = self.tab.iloc[1, 1]
         
         # Calculating the rates
+        self.pr = np.round((tp + fp) / len(y), round)
+        self.nr = np.round((tn + fn) / len(y), round)
         self.tnr = np.round(tn / (tn + fp), round)
         self.tpr = np.round(tp / (tp + fn), round)
         self.fnr = np.round(fn / (fn + tp), round)
@@ -121,6 +123,7 @@ class PredictionBalancer:
         # Calcuating the groupwise classification rates
         group_rates = [CLFRates(y[i], y_[i]) for i in group_ids]
         self.group_rates = dict(zip(self.groups, group_rates))
+        dr = [(g.pr - g.nr) for g in group_rates]
         self.overall_rates = CLFRates(y, y_)
         
         # Getting the overall error rates and group proportions
@@ -129,8 +132,8 @@ class PredictionBalancer:
         p = self.p
         
         # Setting up the coefficients for the objective function
-        obj_coefs = np.array([[(s - e) * prop, (e - s) * prop]
-                             for prop in p]).flatten()
+        obj_coefs = np.array([[(e - s) * r, (s - e) * r]
+                             for r in dr]).flatten()
         obj_bounds = [(0, 1)]
         
         # Generating the pairs for comparison
@@ -177,8 +180,9 @@ class PredictionBalancer:
                                        bounds=obj_bounds,
                                        A_eq=roc_coefs,
                                        b_eq=roc_bounds)
-        self.loss = np.round(self.opt.fun, round) + 1
-        self.pya = self.opt.x.reshape(len(self.groups), 2)
+        self.loss = 1 + 2*e + self.opt.fun
+        pya = self.opt.x.reshape(len(self.groups), 2)
+        self.pya = np.round(pya, round)
         
         # Setting the adjusted predictions
         self.y_adj = pred_from_pya(y_=self.y_, 
@@ -196,19 +200,17 @@ class PredictionBalancer:
         if return_optima:                
             return {'loss': self.loss, 'roc': self.roc}
     
-    def predict(self, y_, a, 
-                binom=False, 
-                return_preds=False):
+    def predict(self, y_, a, binom=False):
         adj = pred_from_pya(y_, a, self.pya, binom)
         return adj
     
-    def plot(self, add_lines=False):
+    def plot(self, add_lines=False, alpha=0.5):
         # Plotting the unadjusted ROC coordinates
         orig_coords = group_roc_coords(self.y, self.y_, self.a)
         plt.scatter(x=orig_coords.fpr,
                     y=orig_coords.tpr, 
                     color='red',
-                    alpha=0.8)
+                    alpha=alpha)
         plt.xlim((0, 1))
         plt.ylim((0, 1))
         
@@ -217,12 +219,26 @@ class PredictionBalancer:
         plt.scatter(x=adj_coords.fpr, 
                     y=adj_coords.tpr, 
                     color='blue', 
-                    alpha=0.8)
+                    alpha=alpha)
         
         # Adding lines to show the LP geometry
         if add_lines:
             pass
         plt.show()
+    
+    def summary(self):
+        adj_coords = group_roc_coords(self.y, self.y_adj, self.a)
+        adj_loss = 1 - CLFRates(self.y, self.y_adj).acc
+        org_coords = group_roc_coords(self.y, self.y_, self.a)
+        org_loss = 1 - self.overall_rates.acc
+        
+        print('\nPre-adjustment group rates were \n')
+        print(org_coords)
+        print('\nAnd loss was %.4f' %org_loss)
+        print('\n \n')
+        print('Post-adjustment group rates are \n')
+        print(adj_coords)
+        print('\nAnd loss is %.4f\n' %adj_loss)
 
 
 class ProbabilityBalancer:
@@ -267,5 +283,6 @@ race = np.repeat(records.race.values, 10)
 # Testing the balancer
 pb = PredictionBalancer()
 pb.fit(pcr, taste, race)
+pb.summary()
 pb.plot()
 
