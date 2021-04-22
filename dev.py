@@ -39,6 +39,7 @@ def from_top(roc_point, round=4):
     d = np.sqrt(roc_point[0]**2 + (roc_point[1] - 1)**2)
     return d
 
+
 def roc_coords(y, y_, round=4):
     # Getting hte counts
     tab = pd.crosstab(y_, y)
