@@ -37,7 +37,6 @@ class PredictionBalancer:
         # Calcuating the groupwise classification rates
         group_rates = [CLFRates(y[i], y_[i]) for i in group_ids]
         self.group_rates = dict(zip(self.groups, group_rates))
-        #dr = [(g.pr - g.nr)*self.p[i] for i, g in enumerate(group_rates)]
         dr = [(g.nr*self.p[i], g.pr*self.p[i]) 
               for i, g in enumerate(group_rates)]
         
@@ -50,7 +49,6 @@ class PredictionBalancer:
         obj_coefs = np.array([[(s - e) * r[0], 
                                (e - s) * r[1]]
                              for r in dr]).flatten()
-        print(obj_coefs)
         obj_bounds = [(0, 1)]
         
         # Generating the pairs for comparison
@@ -60,8 +58,9 @@ class PredictionBalancer:
         
         # Pair drop to keep things full-rank with 3 or more groups
         if n_groups > 2:
-            del group_combos[-1]
-            del id_combos[-1]
+            n_comp = n_groups - 1
+            group_combos = group_combos[:n_comp]
+            id_combos = id_combos[:n_comp]
         
         col_combos = np.array(id_combos) * 2
         n_pairs = len(group_combos)
@@ -162,24 +161,3 @@ class PredictionBalancer:
         print(adj_coords)
         print('\nAnd loss is %.4f\n' %adj_loss)
 
-
-class ProbabilityBalancer:
-    def __init__(self):
-        pass
-    
-    def fit(y, probs, a, return_optima=True):
-        self.y = y
-        self.probs = probs
-        self.a = a
-        self.groups = np.unique(a)
-        
-        # Getting the row numbers for each group
-        group_ids = [np.where(a == g)[0] for g in self.groups]
-        
-        # Getting the proportion for each group
-        self.p = [np.round(len(cols) / len(y), round) for cols in group_ids]
-        
-        # Calcuating the groupwise classification rates
-        group_rates = [CLFRates(y[i], y_[i]) for i in group_ids]
-        self.group_rates = dict(zip(self.groups, group_rates))
-        self.overall_rates = CLFRates(y, y_)

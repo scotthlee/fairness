@@ -19,44 +19,54 @@ class ProbabilityBalancer:
     def __init__(self):
         pass
     
-    def fit(y, probs, a, return_optima=True):
+    def fit(self, 
+            y, 
+            probs, 
+            a,
+            round=4, 
+            return_optima=True):
+        
         self.y = y
         self.probs = probs
         self.a = a
         self.groups = np.unique(a)
-        
-        # Getting the row numbers for each group
         group_ids = [np.where(a == g)[0] for g in self.groups]
         
         # Getting the proportion for each group
-        self.p = [np.round(len(cols) / len(y), round) for cols in group_ids]
+        self.p = [(np.sum(a == g) / len(y)) for g in self.groups]
         
-        # Calcuating the groupwise classification rates
-        group_rates = [CLFRates(y[i], y_[i]) for i in group_ids]
-        self.group_rates = dict(zip(self.groups, group_rates))
-        self.overall_rates = CLFRates(y, y_)
+        # Getting the raw ROC info
+        rocs = [roc_curve(y[ids], probs[ids]) for ids in group_ids]
+        self.rocs = rocs
 
+# Testin gthe balancer
+pb = ProbabilityBalancer()
+pb.fit(pcr, probs, race_bin)
+
+
+# Setting the variables for the joint distribution
+pcr = records.pcr.values
+cough = records.cough.values
+fever = records.fever.values
+taste = records.losstastesmell.values
+race_bin = np.array(records.race == 'White', dtype=np.uint8)
+race = records.race.values
+X = records.iloc[:, 3:18].values
+
+# Fitting a toy model
+rf = RandomForestClassifier(n_estimators=500, oob_score=True)
+rf.fit(X, pcr)
+probs = rf.oob_decision_function_[:, 1]
+
+# Testin gthe balancer
+pb = ProbabilityBalancer()
+pb.fit(pcr, probs, race)
 
 # Importing some test data
 records = pd.read_csv('records.csv')
 
 # Keeping only the 3 most common race groups for now
-records = records[(records.race == 'Black') |
+records = records[(records.race == 'Black / African American') |
                   (records.race == 'White') |
-                  (records.race == 'Asian')]
-
-# Setting the variables for the joint distribution
-pcr = np.repeat(records.pcr_pos.values, 10)
-cough = np.repeat(records.cough.values, 10)
-fever = np.repeat(records.fever_chills.values, 10)
-taste = np.repeat(records.tastesmell_combo.values, 10)
-race_bin = np.repeat(np.array(records.race == 'White', 
-                              dtype=np.uint8), 10)
-race = np.repeat(records.race.values, 10)
-
-# Testing the balancer
-pb = b.PredictionBalancer()
-pb.fit(pcr, taste, race)
-pb.summary()
-pb.plot()
-
+                  (records.race == 'Asian') |
+                  (records.race == 'Undisclosed')]
