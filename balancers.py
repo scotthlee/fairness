@@ -111,7 +111,8 @@ class PredictionBalancer:
         self.opt = sp.optimize.linprog(c=obj_coefs,
                                        bounds=obj_bounds,
                                        A_eq=roc_coefs,
-                                       b_eq=roc_bounds)
+                                       b_eq=roc_bounds,
+                                       method='highs')
         self.pya = self.opt.x.reshape(len(self.groups), 2)
         
         # Setting the adjusted predictions
