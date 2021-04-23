@@ -108,21 +108,16 @@ class PredictionBalancer:
         roc_bounds = np.zeros(roc_coefs.shape[0])
         
         # Running the optimization
-        print(obj_coefs)
-        print(obj_bounds)
-        print(roc_coefs)
-        print(roc_bounds)
         self.opt = sp.optimize.linprog(c=obj_coefs,
                                        bounds=obj_bounds,
                                        A_eq=roc_coefs,
                                        b_eq=roc_bounds)
-        pya = self.opt.x.reshape(len(self.groups), 2)
-        self.pya = np.round(pya, round)
+        self.pya = self.opt.x.reshape(len(self.groups), 2)
         
         # Setting the adjusted predictions
         self.y_adj = tools.pred_from_pya(y_=y_, 
                                          a=self.a,
-                                         pya=pya, 
+                                         pya=self.pya, 
                                          binom=binom)
         
         # Getting theoretical (no rounding) and actual (with rounding) loss
