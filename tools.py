@@ -19,10 +19,10 @@ class CLFRates:
                  y_,
                  round=4):
         self.tab = confusion_matrix(y, y_)
-        tn = self.tab.iloc[0, 0]
-        fn = self.tab.iloc[1, 0]
-        fp = self.tab.iloc[0, 1]
-        tp = self.tab.iloc[1, 1]
+        tn = self.tab[0, 0]
+        fn = self.tab[1, 0]
+        fp = self.tab[0, 1]
+        tp = self.tab[1, 1]
         self.pr = np.round((tp + fp) / len(y), round)
         self.nr = np.round((tn + fn) / len(y), round)
         self.tnr = np.round(tn / (tn + fp), round)
