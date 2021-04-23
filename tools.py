@@ -51,11 +51,11 @@ def from_top(roc_point, round=4):
 
 def roc_coords(y, y_, round=4):
     # Getting hte counts
-    tab = pd.crosstab(y_, y)
-    tn = tab.iloc[0, 0]
-    fn = tab.iloc[0, 1]
-    fp = tab.iloc[1, 0]
-    tp = tab.iloc[1, 1]
+    tab = confusion_matrix(y, y_)
+    tn = tab[0, 0]
+    fn = tab[1, 0]
+    fp = tab[0, 1]
+    tp = tab[1, 1]
     
     # Calculating the rates
     tpr = np.round(tp / (tp + fn), round)

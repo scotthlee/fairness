@@ -14,9 +14,7 @@ import tools
 
 class PredictionBalancer:
     def __init__(self,
-                 lp_objective='accuracy',
                  threshold_objective='roc'):
-        self.lp_obj = lp_objective
         self.thr_obj = threshold_objective
         self.rocs = None
         
@@ -27,7 +25,6 @@ class PredictionBalancer:
             round=4,
             return_optima=True,
             binom=False):
-        
         # Getting the group info
         self.a = a
         self.groups = np.unique(a)
@@ -49,14 +46,14 @@ class PredictionBalancer:
                                                           cut)
                 y_ = probs.astype(np.uint8)
         
-        # Setting the basic attributes
+        # Setting the targets
         self.y = y
         self.y_ = y_
         
         # Calcuating the groupwise classification rates
         group_rates = [tools.CLFRates(y[i], y_[i]) for i in group_ids]
         self.group_rates = dict(zip(self.groups, group_rates))
-        dr = [(g.nr*self.p[i], g.pr*self.p[i]) 
+        dr = [(g.nr * self.p[i], g.pr * self.p[i]) 
               for i, g in enumerate(group_rates)]
         
         # Getting the overall error rates and group proportions
@@ -65,13 +62,9 @@ class PredictionBalancer:
         e = 1 - s
         
         # Setting up the coefficients for the objective function
-        if self.lp_obj == 'accuracy':
-            obj_coefs = np.array([[(s - e) * r[0], 
-                                   (e - s) * r[1]]
-                                 for r in dr]).flatten()
-        elif self.objective == 'roc':
-            pass
-        
+        obj_coefs = np.array([[(s - e) * r[0], 
+                               (e - s) * r[1]]
+                             for r in dr]).flatten()
         obj_bounds = [(0, 1)]
         
         # Generating the pairs for comparison
@@ -115,6 +108,10 @@ class PredictionBalancer:
         roc_bounds = np.zeros(roc_coefs.shape[0])
         
         # Running the optimization
+        print(obj_coefs)
+        print(obj_bounds)
+        print(roc_coefs)
+        print(roc_bounds)
         self.opt = sp.optimize.linprog(c=obj_coefs,
                                        bounds=obj_bounds,
                                        A_eq=roc_coefs,
@@ -123,10 +120,10 @@ class PredictionBalancer:
         self.pya = np.round(pya, round)
         
         # Setting the adjusted predictions
-        self.y_adj = tools.pred_from_pya(y_=self.y_, 
-                                   a=self.a,
-                                   pya=self.pya, 
-                                   binom=binom)
+        self.y_adj = tools.pred_from_pya(y_=y_, 
+                                         a=self.a,
+                                         pya=pya, 
+                                         binom=binom)
         
         # Getting theoretical (no rounding) and actual (with rounding) loss
         self.actual_loss = 1 - tools.CLFRates(self.y, self.y_adj).acc
