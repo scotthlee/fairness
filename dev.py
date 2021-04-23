@@ -41,5 +41,6 @@ rf_probs = rf.oob_decision_function_[:, 1]
 # Testin gthe balancer
 pb = PredictionBalancer()
 pb.fit(pcr, rf_probs, race_bin)
-
+pb.summary()
+pb.plot()
 
