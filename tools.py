@@ -5,7 +5,7 @@ import os
 from sklearn.metrics import confusion_matrix
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score, average_precision_score
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.model_selection import StratifiedKFold, cross_val_predict
 from scipy.stats import binom, chi2, norm, percentileofscore
 from copy import deepcopy
@@ -18,16 +18,11 @@ class CLFRates:
                  y, 
                  y_,
                  round=4):
-        # Doing a crosstab to save some time
-        self.tab = pd.crosstab(y_, y)
-        
-        # Getting the basic counts
+        self.tab = confusion_matrix(y, y_)
         tn = self.tab.iloc[0, 0]
-        fn = self.tab.iloc[0, 1]
-        fp = self.tab.iloc[1, 0]
+        fn = self.tab.iloc[1, 0]
+        fp = self.tab.iloc[0, 1]
         tp = self.tab.iloc[1, 1]
-        
-        # Calculating the rates
         self.pr = np.round((tp + fp) / len(y), round)
         self.nr = np.round((tn + fn) / len(y), round)
         self.tnr = np.round(tn / (tn + fp), round)
