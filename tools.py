@@ -5,6 +5,7 @@ import os
 from sklearn.metrics import confusion_matrix
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score, average_precision_score
+from sklearn.metrics import accuracy_score
 from sklearn.model_selection import StratifiedKFold, cross_val_predict
 from scipy.stats import binom, chi2, norm, percentileofscore
 from copy import deepcopy
@@ -34,6 +35,18 @@ class CLFRates:
         self.fnr = np.round(fn / (fn + tp), round)
         self.fpr = np.round(fp / (fp + tn), round)
         self.acc = (tn + tp) / len(y)
+
+
+def loss_from_roc(y, probs, roc):
+    points = [(roc[0][i], roc[1][i]) for i in range(len(roc[0]))]
+    guess_list = [threshold(probs, t) for t in roc[2]]
+    accs = [accuracy_score(y, g) for g in guess_list]
+    js = [p[1] - p[0] for p in points]
+    tops = [from_top(point) for point in points]
+    return {'guesses': guess_list, 
+            'accs': accs, 
+            'js': js, 
+            'tops': tops}
 
 
 def from_top(roc_point, round=4):
