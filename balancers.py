@@ -24,6 +24,7 @@ class PredictionBalancer:
         self.y_ = y_
         self.thr_obj = threshold_objective
         self.rocs = None
+        self.roc = None
         
         # Getting the group info
         self.a = a
@@ -153,9 +154,11 @@ class PredictionBalancer:
         return adj
     
     def plot(self, 
-             draw_chance=True,
-             add_optimum=True,
-             add_lines=False, 
+             preds=False,
+             optimum=True,
+             roc_curves=True,
+             lp_lines=False, 
+             chance_line=True,
              alpha=0.5):
         # Plotting the unadjusted ROC coordinates
         orig_coords = tools.group_roc_coords(self.y, self.y_, self.a)
@@ -167,26 +170,30 @@ class PredictionBalancer:
         plt.ylim((0, 1))
         
         # Plotting the adjusted coordinates
-        adj_coords = tools.group_roc_coords(self.y, self.y_adj, self.a)
-        plt.scatter(x=adj_coords.fpr, 
-                    y=adj_coords.tpr, 
-                    color='blue', 
-                    alpha=alpha)
+        if preds:
+            adj_coords = tools.group_roc_coords(self.y, self.y_adj, self.a)
+            plt.scatter(x=adj_coords.fpr, 
+                        y=adj_coords.tpr, 
+                        color='blue', 
+                        alpha=alpha)
         
         # Optionally adding the ROC curves
-        if self.rocs is not None:
+        if self.rocs is not None and roc_curves:
             [plt.plot(r[0], r[1]) for r in self.rocs]
         
         # Optionally adding the chance line
-        if draw_chance:
+        if chance_line:
             plt.plot((0, 1), (0, 1),
                      color='lightgray')
         # Adding lines to show the LP geometry
-        if add_lines:
+        if lp_lines:
             pass
         
         # Optionally adding the post-adjustment optimum
-        if add_optimum:
+        if optimum:
+            err_mess1 = '.adjust() must be called '
+            err_mess2 = 'before the optimum balance point can be shown.'
+            assert self.roc is not None, err_mess1 + err_mess2
             plt.scatter(self.roc[0],
                         self.roc[1],
                         marker='x',
