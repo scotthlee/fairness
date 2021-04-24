@@ -14,22 +14,21 @@ import tools
 
 class PredictionBalancer:
     def __init__(self,
+                 y,
+                 y_,
+                 a,
                  threshold_objective='roc'):
+        # Setting the targets
+        self.y = y
+        self.y_ = y_
         self.thr_obj = threshold_objective
         self.rocs = None
         
-    def fit(self,
-            y,
-            y_,
-            a,
-            round=4,
-            return_optima=True,
-            binom=False):
         # Getting the group info
         self.a = a
         self.groups = np.unique(a)
         group_ids = [np.where(a == g)[0] for g in self.groups]
-        self.p = [np.round(len(cols) / len(y), round) for cols in group_ids]
+        self.p = [len(cols) / len(y) for cols in group_ids]
         
         # Optionally thresholding probabilities to get class predictions
         if np.any([0 < x < 1 for x in y_]):
@@ -44,20 +43,25 @@ class PredictionBalancer:
                 for g, cut in enumerate(cuts):
                     probs[group_ids[g]] = tools.threshold(probs[group_ids[g]],
                                                           cut)
-                y_ = probs.astype(np.uint8)
-        
-        # Setting the targets
-        self.y = y
-        self.y_ = y_
+                self.y_ = probs.astype(np.uint8)
         
         # Calcuating the groupwise classification rates
-        group_rates = [tools.CLFRates(y[i], y_[i]) for i in group_ids]
-        self.group_rates = dict(zip(self.groups, group_rates))
+        self._gr_list = [tools.CLFRates(y[i], y_[i]) for i in group_ids]
+        self.group_rates = dict(zip(self.groups, self._gr_list))
+        
+        # And then the overall rates
+        self.overall_rates = tools.CLFRates(y, y_)
+        
+        
+    def adjust(self,
+               round=4,
+               return_optima=True,
+               binom=False):
+        # Getting the coefficients for the objective
         dr = [(g.nr * self.p[i], g.pr * self.p[i]) 
-              for i, g in enumerate(group_rates)]
+              for i, g in enumerate(self._gr_list)]
         
         # Getting the overall error rates and group proportions
-        self.overall_rates = tools.CLFRates(y, y_)
         s = self.overall_rates.acc
         e = 1 - s
         
@@ -103,20 +107,19 @@ class PredictionBalancer:
             fprs[i, cols[1]] = -g1.tnr
             fprs[i, cols[1] + 1] = -g1.fpr
         
-        roc_coefs = np.vstack((tprs, fprs))
-        self.roc_coefs = roc_coefs
-        roc_bounds = np.zeros(roc_coefs.shape[0])
+        self.con = np.vstack((tprs, fprs))
+        con_b = np.zeros(self.con.shape[0])
         
         # Running the optimization
         self.opt = sp.optimize.linprog(c=obj_coefs,
                                        bounds=obj_bounds,
-                                       A_eq=roc_coefs,
-                                       b_eq=roc_bounds,
+                                       A_eq=self.con,
+                                       b_eq=con_b,
                                        method='highs')
         self.pya = self.opt.x.reshape(len(self.groups), 2)
         
         # Setting the adjusted predictions
-        self.y_adj = tools.pred_from_pya(y_=y_, 
+        self.y_adj = tools.pred_from_pya(y_=self.y_, 
                                          a=self.a,
                                          pya=self.pya, 
                                          binom=binom)
@@ -183,17 +186,17 @@ class PredictionBalancer:
         
         plt.show()
     
-    def summary(self):
-        adj_coords = tools.group_roc_coords(self.y, self.y_adj, self.a)
-        adj_loss = 1 - tools.CLFRates(self.y, self.y_adj).acc
+    def summary(self, adj=True):
         org_coords = tools.group_roc_coords(self.y, self.y_, self.a)
         org_loss = 1 - self.overall_rates.acc
-        
-        print('\nPre-adjustment group rates were \n')
+        print('\nPre-adjustment group rates are \n')
         print(org_coords)
-        print('\nAnd loss was %.4f' %org_loss)
-        print('\n \n')
-        print('Post-adjustment group rates are \n')
-        print(adj_coords)
-        print('\nAnd loss is %.4f\n' %adj_loss)
+        print('\nAnd loss was %.4f\n' %org_loss)
+        
+        if adj:
+            adj_coords = tools.group_roc_coords(self.y, self.y_adj, self.a)
+            adj_loss = 1 - tools.CLFRates(self.y, self.y_adj).acc
+            print('\nPost-adjustment group rates are \n')
+            print(adj_coords)
+            print('\nAnd loss is %.4f\n' %adj_loss)
 
