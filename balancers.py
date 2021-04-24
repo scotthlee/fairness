@@ -48,11 +48,12 @@ class PredictionBalancer:
                 self.y_ = probs.astype(np.uint8)
         
         # Calcuating the groupwise classification rates
-        self._gr_list = [tools.CLFRates(y[i], y_[i]) for i in group_ids]
+        self._gr_list = [tools.CLFRates(self.y[i], self.y_[i]) 
+                         for i in group_ids]
         self.group_rates = dict(zip(self.groups, self._gr_list))
         
         # And then the overall rates
-        self.overall_rates = tools.CLFRates(y, y_)
+        self.overall_rates = tools.CLFRates(self.y, self.y_)
         
         if summary:
             self.summary(adj=False)
