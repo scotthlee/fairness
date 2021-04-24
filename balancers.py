@@ -17,6 +17,7 @@ class PredictionBalancer:
                  y,
                  y_,
                  a,
+                 summary=True,
                  threshold_objective='roc'):
         # Setting the targets
         self.y = y
@@ -52,10 +53,14 @@ class PredictionBalancer:
         # And then the overall rates
         self.overall_rates = tools.CLFRates(y, y_)
         
+        if summary:
+            self.summary(adj=False)
+        
         
     def adjust(self,
                round=4,
                return_optima=True,
+               summary=True,
                binom=False):
         # Getting the coefficients for the objective
         dr = [(g.nr * self.p[i], g.pr * self.p[i]) 
@@ -137,6 +142,9 @@ class PredictionBalancer:
         tpr = (group.fnr * p0) + (group.tpr * p1)
         self.roc = (np.round(fpr, round), np.round(tpr, round))
         
+        if summary:
+            self.summary(org=False)
+        
         if return_optima:                
             return {'loss': self.theoretical_loss, 'roc': self.roc}
     
@@ -186,17 +194,18 @@ class PredictionBalancer:
         
         plt.show()
     
-    def summary(self, adj=True):
-        org_coords = tools.group_roc_coords(self.y, self.y_, self.a)
-        org_loss = 1 - self.overall_rates.acc
-        print('\nPre-adjustment group rates are \n')
-        print(org_coords)
-        print('\nAnd loss was %.4f\n' %org_loss)
+    def summary(self, org=True, adj=True):
+        if org:
+            org_coords = tools.group_roc_coords(self.y, self.y_, self.a)
+            org_loss = 1 - self.overall_rates.acc
+            print('\nPre-adjustment group rates are \n')
+            print(org_coords.to_string(index=False))
+            print('\nAnd loss is %.4f\n' %org_loss)
         
         if adj:
             adj_coords = tools.group_roc_coords(self.y, self.y_adj, self.a)
             adj_loss = 1 - tools.CLFRates(self.y, self.y_adj).acc
             print('\nPost-adjustment group rates are \n')
-            print(adj_coords)
+            print(adj_coords.to_string(index=False))
             print('\nAnd loss is %.4f\n' %adj_loss)
 

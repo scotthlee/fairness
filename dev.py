@@ -39,8 +39,8 @@ rf.fit(X, pcr)
 rf_probs = rf.oob_decision_function_[:, 1]
 
 # Testin gthe balancer
-pb = b.PredictionBalancer()
-pb.fit(pcr, rf_probs, race_bin)
+pb = b.PredictionBalancer(pcr, taste, race)
+pb.adjust()
 pb.summary()
 pb.plot()
 
