@@ -23,11 +23,11 @@ class PredictionBalancer:
         self.y = y
         self.y_ = y_
         self.a = a
-        self.thr_obj = threshold_objective
         self.rocs = None
         self.roc = None
         self.con = None
         self.goal = None
+        self.thr_obj = threshold_objective
         
         # Getting the group info
         self.groups = np.unique(a)
@@ -174,14 +174,16 @@ class PredictionBalancer:
              lp_lines=False, 
              chance_line=True,
              alpha=0.5):
+        # Setting plot shape and figuring out if we're in ROC or PR space
+        plt.xlim((0, 1))
+        plt.ylim((0, 1))
+        
         # Plotting the unadjusted ROC coordinates
         orig_coords = tools.group_roc_coords(self.y, self.y_, self.a)
         plt.scatter(x=orig_coords.fpr,
                     y=orig_coords.tpr, 
                     color='red',
                     alpha=alpha)
-        plt.xlim((0, 1))
-        plt.ylim((0, 1))
         
         # Plotting the adjusted coordinates
         if preds:
@@ -199,6 +201,7 @@ class PredictionBalancer:
         if chance_line:
             plt.plot((0, 1), (0, 1),
                      color='lightgray')
+        
         # Adding lines to show the LP geometry
         if lp_lines:
             pass
@@ -214,6 +217,7 @@ class PredictionBalancer:
                             self.roc[1],
                             marker='x',
                             color='black')
+            
             elif 'opportunity' in self.goal:
                 plt.hlines(self.roc[1],
                            xmin=0,
@@ -221,6 +225,9 @@ class PredictionBalancer:
                            color='black',
                            linestyles='--',
                            linewidths=0.5)
+            
+            elif 'parity' in self.goal:
+                pass
         
         plt.show()
     
