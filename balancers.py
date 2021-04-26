@@ -22,12 +22,14 @@ class PredictionBalancer:
         # Setting the targets
         self.y = y
         self.y_ = y_
+        self.a = a
         self.thr_obj = threshold_objective
         self.rocs = None
         self.roc = None
+        self.con = None
+        self.goal = None
         
         # Getting the group info
-        self.a = a
         self.groups = np.unique(a)
         group_ids = [np.where(a == g)[0] for g in self.groups]
         self.p = [len(cols) / len(y) for cols in group_ids]
@@ -60,10 +62,14 @@ class PredictionBalancer:
         
         
     def adjust(self,
+               goal='odds',
                round=4,
                return_optima=True,
                summary=True,
                binom=False):
+        
+        self.goal = goal
+        
         # Getting the coefficients for the objective
         dr = [(g.nr * self.p[i], g.pr * self.p[i]) 
               for i, g in enumerate(self._gr_list)]
@@ -114,7 +120,14 @@ class PredictionBalancer:
             fprs[i, cols[1]] = -g1.tnr
             fprs[i, cols[1] + 1] = -g1.fpr
         
-        self.con = np.vstack((tprs, fprs))
+        # Choosing whether to go with equalized odds or opportunity
+        if 'odds' in goal:
+            self.con = np.vstack((tprs, fprs))
+        elif 'opportunity' in goal:
+            self.con = tprs
+        elif 'parity' in goal:
+            pass
+        
         con_b = np.zeros(self.con.shape[0])
         
         # Running the optimization
@@ -195,10 +208,19 @@ class PredictionBalancer:
             err_mess1 = '.adjust() must be called '
             err_mess2 = 'before the optimum balance point can be shown.'
             assert self.roc is not None, err_mess1 + err_mess2
-            plt.scatter(self.roc[0],
-                        self.roc[1],
-                        marker='x',
-                        color='black')
+            
+            if 'odds' in self.goal:
+                plt.scatter(self.roc[0],
+                            self.roc[1],
+                            marker='x',
+                            color='black')
+            elif 'opportunity' in self.goal:
+                plt.hlines(self.roc[1],
+                           xmin=0,
+                           xmax=1,
+                           color='black',
+                           linestyles='--',
+                           linewidths=0.5)
         
         plt.show()
     

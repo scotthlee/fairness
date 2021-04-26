@@ -30,13 +30,8 @@ fever = records.fever.values
 taste = records.losstastesmell.values
 race_bin = np.array(records.race == 'White', dtype=np.uint8)
 race = records.race.values
-cc = records.cc4.values
-X = records.iloc[:, 3:18].values
-
-# Fitting a toy model
-rf = RandomForestClassifier(n_estimators=500, oob_score=True)
-rf.fit(X, pcr)
-rf_probs = rf.oob_decision_function_[:, 1]
+cc = records.case_def.values
+rf_probs = records.rf_prob.values
 
 # Testin gthe balancer
 pb = b.PredictionBalancer(pcr, cc, race)
