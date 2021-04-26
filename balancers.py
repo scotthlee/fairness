@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import scipy as sp
 import itertools
-import seaborn as sbn
+import seaborn as sns
 
 from matplotlib import pyplot as plt
 from itertools import combinations
@@ -168,30 +168,41 @@ class PredictionBalancer:
         return adj
     
     def plot(self, 
+             s1=50,
+             s2=50,
              preds=False,
              optimum=True,
              roc_curves=True,
              lp_lines=False, 
              chance_line=True,
+             style='dark',
              alpha=0.5):
-        # Setting plot shape and figuring out if we're in ROC or PR space
+        
+        # Setting basic plot parameters
         plt.xlim((0, 1))
         plt.ylim((0, 1))
+        sns.set_theme()
+        sns.set_style(style)
         
         # Plotting the unadjusted ROC coordinates
         orig_coords = tools.group_roc_coords(self.y, self.y_, self.a)
-        plt.scatter(x=orig_coords.fpr,
-                    y=orig_coords.tpr, 
-                    color='red',
-                    alpha=alpha)
+        sns.scatterplot(x=orig_coords.fpr,
+                        y=orig_coords.tpr,
+                        hue=self.groups,
+                        s=s1,
+                        palette='colorblind')
         
         # Plotting the adjusted coordinates
         if preds:
             adj_coords = tools.group_roc_coords(self.y, self.y_adj, self.a)
-            plt.scatter(x=adj_coords.fpr, 
-                        y=adj_coords.tpr, 
-                        color='blue', 
-                        alpha=alpha)
+            sns.scatterplot(x=adj_coords.fpr, 
+                            y=adj_coords.tpr,
+                            hue=self.groups,
+                            palette='colorblind',
+                            marker='x',
+                            legend=False,
+                            s=s2,
+                            alpha=1)
         
         # Optionally adding the ROC curves
         if self.rocs is not None and roc_curves:
@@ -214,9 +225,9 @@ class PredictionBalancer:
             
             if 'odds' in self.goal:
                 plt.scatter(self.roc[0],
-                            self.roc[1],
-                            marker='x',
-                            color='black')
+                                self.roc[1],
+                                marker='x',
+                                color='black')
             
             elif 'opportunity' in self.goal:
                 plt.hlines(self.roc[1],

@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import scipy as sp
 import itertools
-import seaborn as sbn
+import seaborn as sns
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score, recall_score, roc_curve, hinge_loss
