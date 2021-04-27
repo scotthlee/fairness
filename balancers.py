@@ -1,3 +1,5 @@
+'''A class for debiasing binary predictions.'''
+
 import pandas as pd
 import numpy as np
 import scipy as sp
@@ -17,12 +19,88 @@ class PredictionBalancer:
                  y,
                  y_,
                  a,
+                 data=None,
                  summary=True,
-                 threshold_objective='roc'):
+                 threshold_objective='j'):
+        '''Initializes an instance of a PredictionBalancer.
+        
+        Parameters
+        ----------
+        y : array-like of shape (n_samples,) or str
+            The true labels, either as a binary array or as a string \
+            specifying a column in data. 
+        
+        y_ : array-like of shape (n_samples,) or str
+            The predicted labels, either as an int (predictions) or float \
+            (probabilities) array, or as a string specifying a column in data.
+        
+        a : array-like of shape (n_samples,) or str
+            The protected attribute, either as an array, or as a string \
+            specifying the column in data.
+            
+        data : pd.DataFrame instance, default None
+            (Optional) DataFrame from which to pull y, y_, and a.
+        
+        summary : bool, default True
+            Whether to print pre-adjustment false-positive and true-positive \
+            rates for each group.
+        
+        threshold_objective : str, default 'j'
+            Objective to use in evaluating thresholds when y_ contains \
+            probabilities. Default is Youden's J index, or TPR - (1 - FPR) + 1.
+        
+        
+        Attributes
+        ----------
+        actual_loss : float
+            Loss on the current set of predictions in y_adj. 
+        
+        con : ndarray
+            The coefficients of the constraint matrix for the linear program.
+        
+        goal : {'odds', 'opportunity'}, default 'odds'
+            The fairness constraint to satisfy. Options are equalized odds \
+            or equal opportunity. Set during .adjust().
+        
+        group_rates : dict
+            The unadjusted tools.CLFRates object for each group.
+        
+        overall_rates : tools.CLFRates object
+            The unadjusted CLFRates for the data overall.
+        
+        p : ndarray of shape (n_groups,)
+            The proportions for each level of the protected attribute.
+        
+        pya : ndrray of shape (n_groups, 2)
+            (P(y~=1 | y_=0), P(y~=1 | y_=1)) for each group after adjustment. \
+            Set during .adjust().
+        
+        rocs : list of sklearn.metrics.roc_curve results
+            The roc curves for each group. Set only when y_ contains \
+            probabilities.
+        
+        roc : tuple
+            The theoretical optimum for (fpr, tpr) under equalized odds. Set \
+            during .adjiust().
+        
+        theoretical_loss : float
+            The theoretical optimum for loss given the constraints.
+        
+        y_adj : ndarray of shape (n_samples,)
+            Predictions generated using the post-adjustment probabilities in \
+            pya. Set on .adjust().
+        
+        '''
+        # Optional pull from a pd.DataFrame()
+        if data is not None:
+            y = data[y].values
+            y_ = data[y_].values
+            a = data[a].values
+            
         # Setting the targets
-        self.y = y
-        self.y_ = y_
-        self.a = a
+        self.__y = y
+        self.__y_ = y_
+        self.__a = a
         self.rocs = None
         self.roc = None
         self.con = None
@@ -39,23 +117,25 @@ class PredictionBalancer:
             print('Probabilities detected.\n')
             probs = deepcopy(y_)
             self.rocs = [roc_curve(y[ids], probs[ids]) for ids in group_ids]
-            self.roc_stats = [tools.loss_from_roc(y[ids], probs[ids], self.rocs[i]) 
+            self.__roc_stats = [tools.loss_from_roc(y[ids], 
+                                                    probs[ids], 
+                                                    self.rocs[i]) 
                               for i, ids in enumerate(group_ids)]
-            if self.thr_obj == 'roc':
-                cut_ids = [np.argmax(rs['js']) for rs in self.roc_stats]
+            if self.thr_obj == 'j':
+                cut_ids = [np.argmax(rs['js']) for rs in self.__roc_stats]
                 cuts = [self.rocs[i][2][id] for i, id in enumerate(cut_ids)]
                 for g, cut in enumerate(cuts):
                     probs[group_ids[g]] = tools.threshold(probs[group_ids[g]],
                                                           cut)
-                self.y_ = probs.astype(np.uint8)
+                self.__y_ = probs.astype(np.uint8)
         
         # Calcuating the groupwise classification rates
-        self._gr_list = [tools.CLFRates(self.y[i], self.y_[i]) 
+        self.__gr_list = [tools.CLFRates(self.__y[i], self.__y_[i]) 
                          for i in group_ids]
-        self.group_rates = dict(zip(self.groups, self._gr_list))
+        self.group_rates = dict(zip(self.groups, self.__gr_list))
         
         # And then the overall rates
-        self.overall_rates = tools.CLFRates(self.y, self.y_)
+        self.overall_rates = tools.CLFRates(self.__y, self.__y_)
         
         if summary:
             self.summary(adj=False)
@@ -72,7 +152,7 @@ class PredictionBalancer:
         
         # Getting the coefficients for the objective
         dr = [(g.nr * self.p[i], g.pr * self.p[i]) 
-              for i, g in enumerate(self._gr_list)]
+              for i, g in enumerate(self.__gr_list)]
         
         # Getting the overall error rates and group proportions
         s = self.overall_rates.acc
@@ -139,13 +219,13 @@ class PredictionBalancer:
         self.pya = self.opt.x.reshape(len(self.groups), 2)
         
         # Setting the adjusted predictions
-        self.y_adj = tools.pred_from_pya(y_=self.y_, 
-                                         a=self.a,
+        self.y_adj = tools.pred_from_pya(y_=self.__y_, 
+                                         a=self.__a,
                                          pya=self.pya, 
                                          binom=binom)
         
         # Getting theoretical (no rounding) and actual (with rounding) loss
-        self.actual_loss = 1 - tools.CLFRates(self.y, self.y_adj).acc
+        self.actual_loss = 1 - tools.CLFRates(self.__y, self.y_adj).acc
         cmin = self.opt.fun
         tl = cmin + (e*self.overall_rates.nr) + (s*self.overall_rates.pr)
         self.theoretical_loss = tl
@@ -185,7 +265,7 @@ class PredictionBalancer:
         sns.set_style(style)
         
         # Plotting the unadjusted ROC coordinates
-        orig_coords = tools.group_roc_coords(self.y, self.y_, self.a)
+        orig_coords = tools.group_roc_coords(self.__y, self.__y_, self.__a)
         sns.scatterplot(x=orig_coords.fpr,
                         y=orig_coords.tpr,
                         hue=self.groups,
@@ -194,7 +274,7 @@ class PredictionBalancer:
         
         # Plotting the adjusted coordinates
         if preds:
-            adj_coords = tools.group_roc_coords(self.y, self.y_adj, self.a)
+            adj_coords = tools.group_roc_coords(self.__y, self.y_adj, self.__a)
             sns.scatterplot(x=adj_coords.fpr, 
                             y=adj_coords.tpr,
                             hue=self.groups,
@@ -244,15 +324,15 @@ class PredictionBalancer:
     
     def summary(self, org=True, adj=True):
         if org:
-            org_coords = tools.group_roc_coords(self.y, self.y_, self.a)
+            org_coords = tools.group_roc_coords(self.__y, self.__y_, self.__a)
             org_loss = 1 - self.overall_rates.acc
             print('\nPre-adjustment group rates are \n')
             print(org_coords.to_string(index=False))
             print('\nAnd loss is %.4f\n' %org_loss)
         
         if adj:
-            adj_coords = tools.group_roc_coords(self.y, self.y_adj, self.a)
-            adj_loss = 1 - tools.CLFRates(self.y, self.y_adj).acc
+            adj_coords = tools.group_roc_coords(self.__y, self.y_adj, self.__a)
+            adj_loss = 1 - tools.CLFRates(self.__y, self.y_adj).acc
             print('\nPost-adjustment group rates are \n')
             print(adj_coords.to_string(index=False))
             print('\nAnd loss is %.4f\n' %adj_loss)
