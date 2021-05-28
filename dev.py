@@ -16,7 +16,7 @@ import tools
 
 
 # Reading in the data
-df = pd.read_csv('farm_animals.csv')
+df = pd.read_csv('data/farm_animals.csv')
 
 # Making a single binary for shear
 shear = np.array(df.action == 'shear', dtype=np.uint8)
