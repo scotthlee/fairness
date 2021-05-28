@@ -1,13 +1,13 @@
-# fairness
+# Fairness
 ## Introduction
 This repository implements several postprocessing algorithms designed to debias pretrained classifiers. It uses linear programming for everything, including its work with real-valued predictors, and so the bulk of the solving code is an implementation (and extension) of the method presented by Hardt, Price, and Srebro in their [2016 paper](https://arxiv.org/pdf/1610.02413.pdf) on fairness in supervised learning. 
 
 ## The methods
 ### Background
-The main goal of any postprocessing method is to take an existing classifier and make it fair for all levels of a protected category, like race or religion. There are a number of ways to do this, but in Hardt, Price, and Srebro's paper, they take an oblivious approach, such that the adjusted classifier (or derived predictor, Y tilde) only relies on the joint distribution of the true label (Y), the predicted label (Y hat), and the protected attribute (A). 
+The main goal of any postprocessing method is to take an existing classifier and make it fair for all levels of a protected category, like race or religion. There are a number of ways to do this, but in Hardt, Price, and Srebro's paper, they take an oblivious approach, such that the adjusted classifier (or derived predictor, Y tilde) only relies on the joint distribution of the true label (Y), the predicted label (Y hat), and the protected attribute.
 
 ### Implementation
-Our implementation relies on a single class, the `PredictionBalancer`, which uses a number of 
+Our implementation relies on a single class, the `PredictionBalancer`, to perform the adjustment. 
 
 ## The data
 For demo purposes, the repository comes with a synthetic dataset, `farm_animals.csv`, which we created with `data_gen.py`. Here are the data elements:
