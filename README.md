@@ -11,7 +11,7 @@ The main goal of any postprocessing method is to take an existing classifier and
 Commonly, continuous predictors (e.g., predicted probabilities) are thresholded to produce class predictions before be examined for fairness. Hardt, Price, and Srebrbo proposed adding randomness to the selection of threshold for each group to make the resulting predictions fair, but here we take the arguably more straightforward approach of thresholding the scores first (choosing thresholds that maximize groupwise performance) and then using the linear program as in the discrete case to solve for the derived predictor. Theoretically, this may be sub-optimal, but practically, it runs fast and works well.
 
 #### Multiclass outcomes
-TBA
+Coming soon!
 
 ### Implementation
 Our implementation relies on a single class, the `PredictionBalancer`, to perform the adjustment. Initializing the balancer with the true label, the predicted label, and the protected attribute will produce a report with the groupwise true- and false-positive rates, and the rest of the functionality comes from a few key methods:
