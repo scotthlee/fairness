@@ -4,14 +4,21 @@ This repository implements several postprocessing algorithms designed to debias 
 
 ## Methods
 ### Background
-The main goal of any postprocessing method is to take an existing classifier and make it fair for all levels of a protected category, like race or religion. There are a number of ways to do this, but in Hardt, Price, and Srebro's paper, they take an oblivious approach, such that the adjusted classifier (or derived predictor, Y tilde) only relies on the joint distribution of the true label (Y), the predicted label (Y hat), and the protected attribute.
+#### Discrete predictor for a binary outcome
+The main goal of any postprocessing method is to take an existing classifier and make it fair for all levels of a protected category, like race or religion. There are a number of ways to do this, but in Hardt, Price, and Srebro's paper, they take an oblivious approach, such that the adjusted classifier (or derived predictor, Y tilde) only relies on the joint distribution of the true label (Y), the predicted label (Y hat), and the protected attribute (A). Here, we take the same approach, using a linear program to solve for the conditional probabilities (Y tilde = Y hat) that make the most accurate fair predictions with respect to Y. 
+
+#### Continuous predictor for a binary outcome
+Commonly, continuous predictors (e.g., predicted probabilities) are thresholded to produce class predictions before be examined for fairness. Hardt, Price, and Srebrbo proposed adding randomness to the selection of threshold for each group to make the resulting predictions fair, but here we take the arguably more straightforward approach of thresholding the scores first (choosing thresholds that maximize groupwise performance) and then using the linear program as in the discrete case to solve for the derived predictor. Theoretically, this may be sub-optimal, but practically, it runs fast and works well.
+
+#### Multiclass outcomes
+TBA
 
 ### Implementation
 Our implementation relies on a single class, the `PredictionBalancer`, to perform the adjustment. Initializing the balancer with the true label, the predicted label, and the protected attribute will produce a report with the groupwise true- and false-positive rates, and the rest of the functionality comes from a few key methods:
 
-1. `.adjust()`: Solves the linear program to find the optimal fair dervied predictor. Also produces a report with the adjusted groupwise TPRs/FPRs.
-2. `.plot()`: Plots the groupwise TPRs/FPRs, along with the optimal balance point and the intersecting convex hulls solved by the linear program.
-3. `.predict()`: Generates predictions from the conditional probabilities solved for in `.adjust()`. 
+1. `pb.adjust()`: Solves the linear program to find the optimal fair dervied predictor. Also produces a report with the adjusted groupwise TPRs/FPRs.
+2. `pb.plot()`: Plots the groupwise TPRs/FPRs, along with the optimal balance point and the intersecting convex hulls solved by the linear program.
+3. `pb.predict()`: Generates predictions from the conditional probabilities solved for in `.adjust()`. 
 
 There's some nuance to each of these methods, so please read the docstrings for more information on how to use them.
 
