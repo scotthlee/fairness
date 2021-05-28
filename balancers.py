@@ -377,6 +377,7 @@ class PredictionBalancer:
                         hue=self.groups,
                         s=s1,
                         palette='colorblind')
+        plt.legend(loc='lower right')
         
         # Plotting the adjusted coordinates
         if preds:
