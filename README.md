@@ -2,14 +2,20 @@
 ## Introduction
 This repository implements several postprocessing algorithms designed to debias pretrained classifiers. It uses linear programming for everything, including its work with real-valued predictors, and so the bulk of the solving code is an implementation (and extension) of the method presented by Hardt, Price, and Srebro in their [2016 paper](https://arxiv.org/pdf/1610.02413.pdf) on fairness in supervised learning. 
 
-## The methods
+## Methods
 ### Background
 The main goal of any postprocessing method is to take an existing classifier and make it fair for all levels of a protected category, like race or religion. There are a number of ways to do this, but in Hardt, Price, and Srebro's paper, they take an oblivious approach, such that the adjusted classifier (or derived predictor, Y tilde) only relies on the joint distribution of the true label (Y), the predicted label (Y hat), and the protected attribute.
 
 ### Implementation
-Our implementation relies on a single class, the `PredictionBalancer`, to perform the adjustment. 
+Our implementation relies on a single class, the `PredictionBalancer`, to perform the adjustment. Initializing the balancer with the true label, the predicted label, and the protected attribute will produce a report with the groupwise true- and false-positive rates, and the rest of the functionality comes from a few key methods:
 
-## The data
+1. `.adjust()`: Solves the linear program to find the optimal fair dervied predictor. Also produces a report with the adjusted groupwise TPRs/FPRs.
+2. `.plot()`: Plots the groupwise TPRs/FPRs, along with the optimal balance point and the intersecting convex hulls solved by the linear program.
+3. `.predict()`: Generates predictions from the conditional probabilities solved for in `.adjust()`. 
+
+There's some nuance to each of these methods, so please read the docstrings for more information on how to use them.
+
+## Data
 For demo purposes, the repository comes with a synthetic dataset, `farm_animals.csv`, which we created with `data_gen.py`. Here are the data elements:
 
 1. `animal`: The kind of farm animal. Options are `cat`, `dog`, and `sheep`. This is the protected attribute A.
@@ -20,5 +26,5 @@ For demo purposes, the repository comes with a synthetic dataset, `farm_animals.
 
 The distirbution of animals is not entirely realistic--a working sheep farmer, for example, would have a much higher ratio of sheep to herding dogs--but the lower class imbalance makes the demo a bit easier to follow.
 
-## The demo
+## Demo
 To see the postprocessing algorithms in action, please check out `demo.ipynb`. The notbeook shows off the main features of the `PredictionBalancer` and is the best place to start if you've never worked with these kinds of adjustments before. Please note: The modules in `requirements.txt` must be installed before running.
