@@ -16,7 +16,7 @@ Coming soon!
 ### Implementation
 Our implementation relies on a single class, the `PredictionBalancer`, to perform the adjustment. Initializing the balancer with the true label, the predicted label, and the protected attribute will produce a report with the groupwise true- and false-positive rates, and the rest of the functionality comes from a few key methods:
 
-1. `pb.adjust()`: Solves the linear program to find the optimal fair dervied predictor. Also produces a report with the adjusted groupwise TPRs/FPRs.
+1. `pb.adjust()`: Solves the linear program to find the optimal fair derived predictor. Also produces a report with the adjusted groupwise TPRs/FPRs.
 2. `pb.plot()`: Plots the groupwise TPRs/FPRs, along with the optimal balance point and the intersecting convex hulls solved by the linear program.
 3. `pb.predict()`: Generates predictions from the conditional probabilities solved for in `.adjust()`. 
 
