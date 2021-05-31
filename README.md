@@ -4,13 +4,15 @@ This repository implements several postprocessing algorithms designed to debias 
 
 ## Methods
 ### Background
+The main goal of any postprocessing method is to take an existing classifier and make it fair for all levels of a protected category, like race or religion. There are a number of ways to do this, but in Hardt, Price, and Srebro's paper, they take an oblivious approach, such that the adjusted classifier (or derived predictor, Y tilde) only relies on the joint distribution of the true label (Y), the predicted label (Y hat), and the protected attribute (A).
+
 #### Discrete predictor for a binary outcome
-The main goal of any postprocessing method is to take an existing classifier and make it fair for all levels of a protected category, like race or religion. There are a number of ways to do this, but in Hardt, Price, and Srebro's paper, they take an oblivious approach, such that the adjusted classifier (or derived predictor, Y tilde) only relies on the joint distribution of the true label (Y), the predicted label (Y hat), and the protected attribute (A). Here, we take the same approach, using a linear program to solve for the conditional probabilities (Y tilde = Y hat) that make the most accurate fair predictions with respect to Y. 
+When both Y and Y hat are binary, the optimization problem is a linear program based on the conditional probabilities (Y tilde = Y hat). In this case, two probabilities, (Y tilde = 1 | Y hat = 1) and (Y tilde = 0 | Y hat = 1) fully define the distribution of the derived predictor, and so the linear program can be written in a very parismonious 2 * n_protected_groups variables. The solution will pinpoint topmost-left point of the intersection of the group-specific convex hulls in ROC space (illustration below).
 
 <img src="https://github.com/scotthlee/fairness/blob/dev/img/nolines.png" width="400" height="300"><img src="https://github.com/scotthlee/fairness/blob/dev/img/lines.png" width="400" height="300">
 
 #### Continuous predictor for a binary outcome
-Commonly, continuous predictors (e.g., predicted probabilities) are thresholded to produce class predictions before be examined for fairness. Hardt, Price, and Srebrbo proposed adding randomness to the selection of threshold for each group to make the resulting predictions fair. Here, we take the arguably more straightforward approach of thresholding the scores first (choosing thresholds that maximize groupwise performance) and then using the linear program as in the discrete case to solve for the derived predictor. Theoretically, this may be sub-optimal, but practically, it runs fast and works well. 
+When Y is binary but Y hat is continuous, Y hat must be thresholded before we can examine it for fairness. Hardt, Price, and Srebrbo proposed adding randomness to the selection of threshold for each group to make the resulting predictions fair. Here, we take the arguably more straightforward approach of thresholding the scores first (choosing thresholds that maximize groupwise performance) and then using the linear program as in the discrete case above to solve for the derived predictor. Theoretically, this may be sub-optimal, but practically, it runs fast and works well (illustration below). 
 
 <img src="https://github.com/scotthlee/fairness/blob/dev/img/roc_nolines.png" width="400" height="300"><img src="https://github.com/scotthlee/fairness/blob/dev/img/roc_lines.png" width="400" height="300">
 
