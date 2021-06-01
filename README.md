@@ -37,7 +37,7 @@ The distirbution of animals is not entirely realistic--a working sheep farmer, f
 To see the postprocessing algorithms in action, please check out the [demo notebook](demo.ipynb). The notbeook shows off the main features of the `PredictionBalancer` and is the best place to start if you've never worked with these kinds of adjustments before. Please note: The modules in `requirements.txt` must be installed before running.
 
 ## Citation
-If you use this code for a project, give us a shout out.
+If you use this code for a project, please give us a shout out.
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4890946.svg)](https://doi.org/10.5281/zenodo.4890946)
 
