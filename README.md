@@ -27,7 +27,7 @@ For demo purposes, the repository comes with a synthetic dataset, `farm_animals.
 
 1. `animal`: The kind of farm animal. Options are `cat`, `dog`, and `sheep`. This is the protected attribute A.
 2. `action`: The kind of care the animal needs. Options are `feed`, `pet`, and `shear`. This is the true label Y.
-3. `pred_action`: The kind of care the farmer thinks the animal needs. This is the predicted label Y hat.
+3. `pred_action`: The kind of care the farmer thinks the animal needs. This is the predicted label Y<sub>hat</sub>.
 4. `shear`: Whether `pred_action` is `shear`.
 5. `shear_prob`: The predicted probability that the animal needs a shear. This was generated using different conditional probabilities than the variable `pred_action`, so it will not equal `shear` when thresholded. 
 
