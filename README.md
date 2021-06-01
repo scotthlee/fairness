@@ -20,7 +20,7 @@ When Y is binary but Y<sub>hat</sub> is continuous, Y<sub>hat</sub> must be thre
 Coming soon!
 
 ### Implementation
-Our implementation relies on a single class, the `PredictionBalancer`, to perform the adjustment. Initializing the balancer with the true label, the predicted label, and the protected attribute will produce a report with the groupwise true- and false-positive rates. The rest of its functionality comes from a few key methods--see the [readme](balancers/README.md) for more info!
+Our implementation relies on a single class, the `PredictionBalancer`, to perform the adjustment. Initializing the balancer with the true label, the predicted label, and the protected attribute will produce a report with the groupwise true- and false-positive rates. The rest of its functionality comes from a few key methods--see the class's [docstrings](balancers/__init__.py) for more info!
 
 ## Data
 For demo purposes, the repository comes with a synthetic dataset, `farm_animals.csv`, which we created with `data_gen.py`. Here are the data elements:
