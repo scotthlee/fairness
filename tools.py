@@ -8,6 +8,7 @@ from sklearn.metrics import roc_auc_score, average_precision_score
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.model_selection import StratifiedKFold, cross_val_predict
 from scipy.stats import binom, chi2, norm, percentileofscore
+from itertools import combinations
 from copy import deepcopy
 from multiprocessing import Pool
 from copy import deepcopy
@@ -913,4 +914,52 @@ def odds_ratio(y, pred, round=2):
     if round is not None:
         OR = np.round(OR, round)
     return OR
+
+
+def cp_mat(y, y_):
+    '''Returns the matrix of conditional probabilities y_ | y'''
+    tab = pd.crosstab(y, y_).values
+    probs = tab.transpose() / tab.sum(axis=1)
+    return probs.transpose()
+
+
+def p_mat(y, flatten=True):
+    '''Returns the matrix of probabilities for y'''
+    tab = pd.crosstab(y, 'count').values
+    out = tab / tab.sum()
+    if flatten:
+        out = out.flatten()
+    return out
+
+
+def fpr_weights(p_mat, cp_mat):
+    # Shortening the vars to keep things clean
+    p = p_mat
+    M = cp_mat
+    
+    # Setting up the matrix of parameters
+    n_classes = M.shape[0]
+    n_params = n_classes**2 - n_classes
+    out = np.zeros(shape=(n_classes, n_params))
+    
+    # Getting the combinations of outcomes
+    combos = list(combinations(range(n_classes), n_classes - 1))
+    combos = [list(c) for c in combos]
+    
+    # Getting weights for the first n-1 classes
+    for i, c in enumerate(combos[1:]):
+        start = i * (n_classes)
+        end = start + n_classes
+        out[i, start:end] = np.dot(p[c], M[c]) / p[c].sum()
+    
+    # And getting the weights for the last class
+    c = combos[0]
+    last = np.dot(p[c], M[c]) / p[c].sum()
+    out[n_classes - 1] = -1 * np.tile(last, n_classes - 1)
+    
+    return out
+    
+    
+    
+    
 
