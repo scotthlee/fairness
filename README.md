@@ -7,7 +7,7 @@ This repository implements several postprocessing algorithms designed to debias 
 The main goal of any postprocessing method is to take an existing classifier and make it fair for all levels of a protected category, like race or religion. There are a number of ways to do this, but in Hardt, Price, and Srebro's paper, they take an oblivious approach, such that the adjusted classifier (or derived predictor, Y<sub>tilde</sub>) only relies on the joint distribution of the true label (Y), the predicted label (Y<sub>hat</sub>), and the protected attribute (A).
 
 #### Discrete predictor for a binary outcome
-When both Y and Y hat are binary, the optimization problem is a linear program based on the conditional probabilities (Y<sub>tilde</sub> = Y<sub>hat</sub>). In this case, two probabilities, (Y<sub>tilde</sub> = 1 | Y<sub>hat</sub> = 1) and (Y<sub>tilde</sub> = 1 | Y<sub>hat</sub> = 0) fully define the distribution of the derived predictor, and so the linear program can be written in a very parismonious 2 * N<sub>groups</sub> variables. The solution will find the topmost-left point of the intersection of the group-specific convex hulls in ROC space (illustration below).
+When both Y and Y hat are binary, the optimization problem is a linear program based on the conditional probabilities (Y<sub>tilde</sub> = Y<sub>hat</sub>). In this case, two probabilities, (Y<sub>tilde</sub> = 1 | Y<sub>hat</sub> = 1) and (Y<sub>tilde</sub> = 1 | Y<sub>hat</sub> = 0) fully define the distribution of the derived predictor, and so the linear program can be written in a very parismonious 2 * N<sub>groups</sub> variables. The solution will find the topmost-left point of the intersection of the group-specific convex hulls defined by the conditional probabilities in ROC space (illustration below).
 
 <img src="https://github.com/scotthlee/fairness/blob/master/img/nolines.png" width="400" height="300"><img src="https://github.com/scotthlee/fairness/blob/master/img/lines.png" width="400" height="300">
 
@@ -23,7 +23,7 @@ Coming soon!
 Our implementation relies on a single class, the `PredictionBalancer`, to perform the adjustment. Initializing the balancer with the true label, the predicted label, and the protected attribute will produce a report with the groupwise true- and false-positive rates. The rest of its functionality comes from a few key methods--see the class's [docstrings](balancers/__init__.py) for more info!
 
 ## Data
-For demo purposes, the repository comes with a synthetic dataset, `farm_animals.csv`, which we created with `data_gen.py`. Here are the data elements:
+For demo purposes, the repository comes with a synthetic dataset, [farm_animals.csv](data/farm_animals.csv), which we created with [data_gen.py](data/data_gen.py). Here are the data elements:
 
 1. `animal`: The kind of farm animal. Options are `cat`, `dog`, and `sheep`. This is the protected attribute A.
 2. `action`: The kind of care the animal needs. Options are `feed`, `pet`, and `shear`. This is the true label Y.
@@ -37,7 +37,7 @@ The distirbution of animals is not entirely realistic--a working sheep farmer, f
 To see the postprocessing algorithms in action, please check out the [demo notebook](demo.ipynb). The notbeook shows off the main features of the `PredictionBalancer` and is the best place to start if you've never worked with these kinds of adjustments before. Please note: The modules in `requirements.txt` must be installed before running.
 
 ## Citation
-If you use this code for a project, give us a shout out.
+If you use this code for a project, please give us a shout out.
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4890946.svg)](https://doi.org/10.5281/zenodo.4890946)
 
