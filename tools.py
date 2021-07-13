@@ -924,7 +924,7 @@ def cp_mat(y, y_):
 
 
 def p_mat(y, flatten=True):
-    '''Returns the matrix of probabilities for y'''
+    '''Returns the matrix of probabilities for the levels y'''
     tab = pd.crosstab(y, 'count').values
     out = tab / tab.sum()
     if flatten:
@@ -933,6 +933,7 @@ def p_mat(y, flatten=True):
 
 
 def fpr_weights(p_mat, cp_mat):
+    '''Calculates weights for the false-positive constraint matrix'''
     # Shortening the vars to keep things clean
     p = p_mat
     M = cp_mat
