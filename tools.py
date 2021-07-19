@@ -932,8 +932,8 @@ def p_mat(y, flatten=True):
     return out
 
 
-def fpr_weights(p_mat, cp_mat):
-    '''Calculates weights for the false-positive constraint matrix'''
+def constraint_weights(p_mat, cp_mat):
+    '''Calculates TPR and FPR weights for the constraint matrix'''
     # Shortening the vars to keep things clean
     p = p_mat
     M = cp_mat
@@ -941,7 +941,8 @@ def fpr_weights(p_mat, cp_mat):
     # Setting up the matrix of parameters
     n_classes = M.shape[0]
     n_params = n_classes**2 - n_classes
-    out = np.zeros(shape=(n_classes, n_params))
+    tpr = np.zeros(shape=(n_classes, n_params))
+    fpr = np.zeros(shape=(n_classes, n_params))
     
     # Getting the combinations of outcomes
     combos = list(combinations(range(n_classes), n_classes - 1))
@@ -951,16 +952,33 @@ def fpr_weights(p_mat, cp_mat):
     for i, c in enumerate(combos[1:]):
         start = i * (n_classes)
         end = start + n_classes
-        out[i, start:end] = np.dot(p[c], M[c]) / p[c].sum()
+        fpr[i, start:end] = np.dot(p[c], M[c]) / p[c].sum()
+        tpr[i, start:end] = M[i]
     
-    # And getting the weights for the last class
+    # Getting the weights for the last class in terms of the others
     c = combos[0]
-    last = np.dot(p[c], M[c]) / p[c].sum()
-    out[n_classes - 1] = -1 * np.tile(last, n_classes - 1)
+    last_tpr = M[n_classes - 1]
+    last_fpr = np.dot(p[c], M[c]) / p[c].sum()
     
-    return out
+    # And filling in the last row of the constraint matrix
+    fpr[n_classes - 1] = -1 * np.tile(last_fpr, n_classes - 1)
+    tpr[n_classes - 1] = -1 * np.tile(last_tpr, n_classes - 1)
     
-    
-    
+    return tpr, fpr
+
+
+def group_constraints(y, y_, a):
+    '''Runs constraint_weights() on the protected groups'''
+    groups = np.unique(a)
+    n_groups = len(groups)
+    group_ids = [np.where(a == g) for g in groups]
+    p_mats = np.array([p_mat(y[ids]) for ids in group_ids])
+    cp_mats = np.array([cp_mat(y[ids], y_[ids]) for ids in group_ids])
+    constraints = np.array([constraint_weights(p_mats[i],
+                                      cp_mats[i]) 
+                   for i in range(n_groups)])
+    return p_mats, cp_mats, constraints
+
+
     
 
