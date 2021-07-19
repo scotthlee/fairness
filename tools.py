@@ -967,18 +967,31 @@ def constraint_weights(p_mat, cp_mat):
     return tpr, fpr
 
 
-def group_constraints(y, y_, a):
-    '''Runs constraint_weights() on the protected groups'''
-    groups = np.unique(a)
-    n_groups = len(groups)
-    group_ids = [np.where(a == g) for g in groups]
-    p_mats = np.array([p_mat(y[ids]) for ids in group_ids])
-    cp_mats = np.array([cp_mat(y[ids], y_[ids]) for ids in group_ids])
-    constraints = np.array([constraint_weights(p_mats[i],
-                                      cp_mats[i]) 
-                   for i in range(n_groups)])
-    return p_mats, cp_mats, constraints
-
+class probability_matrices():
+    def __init__(self,
+                 y,
+                 y_,
+                 a):
+        '''Runs p_mat, cp_mat, and constraint_weights for each group'''
+        self.groups = np.unique(a)
+        self.n_groups = len(self.groups)
+        self.group_probs = p_mat(a)
+        group_ids = [np.where(a == g) for g in self.groups]
+        self.p_mats = np.array([p_mat(y[ids]) for ids in group_ids])
+        self.cp_mats = np.array([cp_mat(y[ids], 
+                                        y_[ids]) for ids in group_ids])
+        self.constraints = np.array([constraint_weights(self.p_mats[i],
+                                                        self.cp_mats[i]) 
+                                     for i in range(self.n_groups)])
+        return
+    
+    def loss_weights(self):
+        '''Returns the weights for 0-1 loss'''
+        tpr_sums = [np.dot(self.p_mats[i], self.constraints[i][0])
+                    for i in range(self.n_groups)]
+        out = np.array([tpr_sums[i] * self.group_probs[i]
+                        for i in range(self.n_groups)])
+        return out.flatten() * -1
 
     
 
