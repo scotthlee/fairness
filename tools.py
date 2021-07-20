@@ -1056,8 +1056,29 @@ def constraint_pairs(pms):
     return tpr_cons, fpr_cons, one_cons
 
 
-def pars_to_cpmat(opt, n_group=3, n_class=3):
+def pars_to_cpmat(opt, n_groups=3, n_classes=3):
     '''Reshapes the LP parameters as an n_group * n_class * n_class array'''
-    shaped = np.reshape(opt.x, (n_group, n_class, n_class))
+    shaped = np.reshape(opt.x, (n_groups, n_classes, n_classes))
     flipped = np.array([m.T for m in shaped])
     return flipped
+
+
+def parmat_to_roc(par_mats,
+                  p_vecs,
+                  cp_mats,
+                  n_groups=3, 
+                  n_classes=3):
+    '''Takes the tensor of parameters from the LP and gets sensitivity and 
+    specificity for each group.
+    '''
+    rocs = np.zeros(shape=(n_groups, n_classes, 2))
+    for i, par_mat in enumerate(par_mats):
+        p = p_vecs[i]
+        M = cp_mats[i]
+        rocs[i, :, 0] = np.diag(np.dot(M, par_mat))
+        for j in range(n_classes):
+            weights = np.dot(np.delete(p, j), np.delete(M, j, 0))
+            weights /= np.sum(np.delete(p, j))
+            rocs[i, j, 1] = np.dot(weights, par_mat[:, j])
+    return rocs
+        

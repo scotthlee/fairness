@@ -58,7 +58,6 @@ eo_opt = linprog(c=macro,
                  b_eq=norm_bounds,
                  bounds=[0, 1],
                  method='highs')
-
 eo_mats = tools.pars_to_cpmat(eo_opt)
 
 eo_eq_bounds = np.repeat(0, 12)
