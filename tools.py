@@ -923,7 +923,7 @@ def cp_mat(y, y_):
     return probs.transpose()
 
 
-def p_mat(y, flatten=True):
+def p_vec(y, flatten=True):
     '''Returns the matrix of probabilities for the levels y'''
     tab = pd.crosstab(y, 'count').values
     out = tab / tab.sum()
@@ -932,15 +932,15 @@ def p_mat(y, flatten=True):
     return out
 
 
-def constraint_weights(p_mat, cp_mat):
+def constraint_weights(p_vec, cp_mat):
     '''Calculates TPR and FPR weights for the constraint matrix'''
     # Shortening the vars to keep things clean
-    p = p_mat
+    p = p_vec
     M = cp_mat
     
     # Setting up the matrix of parameters
     n_classes = M.shape[0]
-    n_params = n_classes**2 - n_classes
+    n_params = n_classes**2
     tpr = np.zeros(shape=(n_classes, n_params))
     fpr = np.zeros(shape=(n_classes, n_params))
     
@@ -949,12 +949,12 @@ def constraint_weights(p_mat, cp_mat):
     combos = [list(c) for c in combos]
     
     # Getting weights for the first n-1 classes
-    for i, c in enumerate(combos[1:]):
+    for i, c in enumerate(combos):
         start = i * (n_classes)
         end = start + n_classes
         fpr[i, start:end] = np.dot(p[c], M[c]) / p[c].sum()
         tpr[i, start:end] = M[i]
-    
+    '''
     # Getting the weights for the last class in terms of the others
     c = combos[0]
     last_tpr = M[n_classes - 1]
@@ -963,35 +963,101 @@ def constraint_weights(p_mat, cp_mat):
     # And filling in the last row of the constraint matrix
     fpr[n_classes - 1] = -1 * np.tile(last_fpr, n_classes - 1)
     tpr[n_classes - 1] = -1 * np.tile(last_tpr, n_classes - 1)
-    
+    '''
     return tpr, fpr
 
 
-class probability_matrices():
+class ProbabilityMatrices():
     def __init__(self,
                  y,
                  y_,
                  a):
-        '''Runs p_mat, cp_mat, and constraint_weights for each group'''
+        '''Runs p_vec, cp_mat, and constraint_weights for each group'''
+        # Getting some basic info for each group
         self.groups = np.unique(a)
         self.n_groups = len(self.groups)
-        self.group_probs = p_mat(a)
+        self.group_probs = p_vec(a)
         group_ids = [np.where(a == g) for g in self.groups]
-        self.p_mats = np.array([p_mat(y[ids]) for ids in group_ids])
-        self.cp_mats = np.array([cp_mat(y[ids], 
-                                        y_[ids]) for ids in group_ids])
-        self.constraints = np.array([constraint_weights(self.p_mats[i],
+        
+        # Getting the group-specific P(Y), P(Y- | Y), and constraint matrices
+        self.p_vecs = np.array([p_vec(y[ids]) for ids in group_ids])
+        self.cp_mats = np.array([cp_mat(y[ids], y_[ids]) 
+                                 for ids in group_ids])
+        self.constraints = np.array([constraint_weights(self.p_vecs[i],
                                                         self.cp_mats[i]) 
                                      for i in range(self.n_groups)])
-        return
-    
-    def loss_weights(self):
-        '''Returns the weights for 0-1 loss'''
-        tpr_sums = [np.dot(self.p_mats[i], self.constraints[i][0])
-                    for i in range(self.n_groups)]
-        out = np.array([tpr_sums[i] * self.group_probs[i]
+        
+        # Weighting and then adding the class-specific TPRs for each group
+        self.tpr_sums = [np.dot(self.p_vecs[i], self.constraints[i][0])
+                         for i in range(self.n_groups)]
+        
+        # Weighting the group-specific TPRs by the group probabilities
+        out = np.array([self.tpr_sums[i] * self.group_probs[i]
                         for i in range(self.n_groups)])
-        return out.flatten() * -1
+        
+        # Flattening the weights so they work with the linear program
+        self.loss_weights = out.flatten() * -1
+        
+        return
 
+
+def constraint_pairs(pms):
+    '''Makes a matrix of the pairwise constraints'''
+    # Setting up the preliminaries
+    tprs = pms.constraints[:, 0, :]
+    fprs = pms.constraints[:, 1, :]
+    n_params = tprs.shape[2]
+    n_classes = tprs.shape[1]
+    n_groups = pms.n_groups
+    group_combos = list(combinations(range(n_groups), 2))[:-1]
+    n_pairs = len(group_combos)
     
+    # Setting up the empty matrices
+    tpr_cons = np.zeros(shape=(n_pairs,
+                               n_groups,
+                               n_classes, 
+                               n_params))
+    fpr_cons = np.zeros(shape=(n_pairs,
+                               n_groups,
+                               n_classes,
+                               n_params))
+    
+    # Filling in the constraint comparisons
+    for i, c in enumerate(group_combos):
+        # Getting the original diffs
+        diffs = pms.cp_mats[c[0]] - pms.cp_mats[c[1]]
+        tpr_flip = np.sign(np.diag(diffs)).reshape(-1, 1)
+        print(tpr_flip)
+        print(tprs[c[0]])
+        
+        # Filling in the 
+        tpr_cons[i, c[0]] = np.multiply(tpr_flip, tprs[c[0]])
+        tpr_cons[i, c[1]] = np.multiply(tpr_flip, -1 * tprs[c[1]])
+        fpr_cons[i, c[0]] = fprs[c[0]]
+        fpr_cons[i, c[1]] = -1 * fprs[c[1]]
+    
+    # Filling in the norm constraints
+    one_cons = np.zeros(shape=(n_groups * n_classes,
+                               n_classes * n_params))
+    cols = np.array(list(range(0, 
+                               n_groups * n_classes**2, 
+                               n_classes)))
+    cols = cols.reshape(n_groups, n_classes)
+    i = 0
+    for c in cols:
+        for j in range(n_classes):
+            one_cons[i, c + j] = 1
+            i += 1
+    
+    # Reshaping the arrays
+    tpr_cons = np.concatenate([np.hstack(m) for m in tpr_cons])
+    fpr_cons = np.concatenate([np.hstack(m) for m in fpr_cons])
+    
+    return tpr_cons, fpr_cons, one_cons
 
+
+def pars_to_cpmat(opt, n_group=3, n_class=3):
+    '''Reshapes the LP parameters as an n_group * n_class * n_class array'''
+    shaped = np.reshape(opt.x, (n_group, n_class, n_class))
+    flipped = np.array([m.T for m in shaped])
+    return flipped
