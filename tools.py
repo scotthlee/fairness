@@ -1024,17 +1024,17 @@ def constraint_pairs(pms):
     
     # Filling in the constraint comparisons
     for i, c in enumerate(group_combos):
-        # Getting the original diffs
+        # Getting the original diffs for flipping
         diffs = pms.cp_mats[c[0]] - pms.cp_mats[c[1]]
         tpr_flip = np.sign(np.diag(diffs)).reshape(-1, 1)
-        print(tpr_flip)
-        print(tprs[c[0]])
+        fpr_flip = np.sign(np.sum(fprs[c[0]], 1) - np.sum(fprs[c[1]], 1))
+        fpr_flip = fpr_flip.reshape(-1, 1)
         
-        # Filling in the 
+        # Filling in the constraints
         tpr_cons[i, c[0]] = np.multiply(tpr_flip, tprs[c[0]])
         tpr_cons[i, c[1]] = np.multiply(tpr_flip, -1 * tprs[c[1]])
-        fpr_cons[i, c[0]] = fprs[c[0]]
-        fpr_cons[i, c[1]] = -1 * fprs[c[1]]
+        fpr_cons[i, c[0]] = fpr_flip * fprs[c[0]]
+        fpr_cons[i, c[1]] = fpr_flip * -1 * fprs[c[1]]
     
     # Filling in the norm constraints
     one_cons = np.zeros(shape=(n_groups * n_classes,
