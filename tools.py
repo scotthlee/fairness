@@ -944,15 +944,16 @@ def constraint_weights(p_vec, cp_mat):
     tpr = np.zeros(shape=(n_classes, n_params))
     fpr = np.zeros(shape=(n_classes, n_params))
     
-    # Getting the combinations of outcomes
-    combos = list(combinations(range(n_classes), n_classes - 1))
-    combos = [list(c) for c in combos]
-    
     # Getting weights for the first n-1 classes
-    for i, c in enumerate(combos):
+    for i in range(n_classes):
+        # Dropping row to calculate FPR
+        p_i = np.delete(p, i)
+        M_i = np.delete(M, i, 0)
+        print((p_i, M_i))
+        
         start = i * (n_classes)
         end = start + n_classes
-        fpr[i, start:end] = np.dot(p[c], M[c]) / p[c].sum()
+        fpr[i, start:end] = np.dot(p_i, M_i) / p_i.sum()
         tpr[i, start:end] = M[i]
     '''
     # Getting the weights for the last class in terms of the others
@@ -1029,12 +1030,13 @@ def constraint_pairs(pms):
         tpr_flip = np.sign(np.diag(diffs)).reshape(-1, 1)
         fpr_flip = np.sign(np.sum(fprs[c[0]], 1) - np.sum(fprs[c[1]], 1))
         fpr_flip = fpr_flip.reshape(-1, 1)
+        fpr_flip[np.where(fpr_flip == 0)] = 1
         
         # Filling in the constraints
         tpr_cons[i, c[0]] = np.multiply(tpr_flip, tprs[c[0]])
         tpr_cons[i, c[1]] = np.multiply(tpr_flip, -1 * tprs[c[1]])
-        fpr_cons[i, c[0]] = fpr_flip * fprs[c[0]]
-        fpr_cons[i, c[1]] = fpr_flip * -1 * fprs[c[1]]
+        fpr_cons[i, c[0]] = np.multiply(fpr_flip, fprs[c[0]])
+        fpr_cons[i, c[1]] = np.multiply(fpr_flip, -1 * fprs[c[1]])
     
     # Filling in the norm constraints
     one_cons = np.zeros(shape=(n_groups * n_classes,
