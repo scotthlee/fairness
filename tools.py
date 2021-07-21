@@ -949,7 +949,6 @@ def constraint_weights(p_vec, cp_mat):
         # Dropping row to calculate FPR
         p_i = np.delete(p, i)
         M_i = np.delete(M, i, 0)
-        print((p_i, M_i))
         
         start = i * (n_classes)
         end = start + n_classes
