@@ -854,31 +854,6 @@ def grid_metrics(targets,
     return pd.concat(scores, axis=0)
 
 
-def roc_cis(rocs, alpha=0.05, round=2):
-    # Getting the quantiles to make CIs
-    lq = (alpha / 2) * 100
-    uq = (1 - (alpha / 2)) * 100
-    fprs = np.concatenate([roc[0] for roc in rocs], axis=0)
-    tprs = np.concatenate([roc[1] for roc in rocs], axis=0)
-    roc_arr = np.concatenate([fprs.reshape(-1, 1), 
-                              tprs.reshape(-1, 1)], 
-                             axis=1)
-    roc_df = pd.DataFrame(roc_arr, columns=['fpr', 'tpr'])
-    roc_df.fpr = roc_df.fpr.round(round)
-    unique_fprs = roc_df.fpr.unique()
-    fpr_idx = [np.where(roc_df.fpr == fpr)[0] for fpr in unique_fprs]
-    tpr_quants = [np.percentile(roc_df.tpr[idx], q=(lq, 50, uq)) 
-                  for idx in fpr_idx]
-    tpr_quants = np.vstack(tpr_quants)
-    quant_arr = np.concatenate([unique_fprs.reshape(-1, 1),
-                                tpr_quants],
-                               axis=1)
-    quant_df = pd.DataFrame(quant_arr, columns=['fpr', 'lower',
-                                                'med', 'upper'])
-    quant_df = quant_df.sort_values('fpr')
-    return quant_df
-
-
 # Converts a boot_cis['cis'] object to a single row
 def merge_cis(c, round=4, mod_name=''):
     str_cis = c.round(round).astype(str)
