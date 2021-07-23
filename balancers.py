@@ -800,7 +800,7 @@ class MulticlassBalancer:
         # Normazliation bounds; used in all scenarios
         norm_bounds = np.repeat(1, norm_cons.shape[0])
         
-        # Choosing whether to go with equalized odds or opportunity
+        # Choosing the constraint conditions
         if 'odds' in goal:
             con = np.concatenate([tpr_cons, fpr_cons, norm_cons])
             eo_bounds = np.repeat(0, tpr_cons.shape[0] * 2)
@@ -815,6 +815,9 @@ class MulticlassBalancer:
             con = np.concatenate([off_cons, norm_cons])
             off_bounds = np.repeat(0, off_cons.shape[0])
             con_bounds = np.concatenate([off_bounds, norm_bounds])
+        
+        self.con = con
+        self.con_bounds = con_bounds
         
         # Running the optimization
         self.opt = sp.optimize.linprog(c=self.obj,
