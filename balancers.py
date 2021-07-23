@@ -612,12 +612,12 @@ class MulticlassBalancer:
         self.roc = None
         self.con = None
         self.goal = None
-        self.thr_obj = threshold_objective
         
         # Getting the group info
         self.groups = np.unique(a)
         group_ids = [np.where(a == g)[0] for g in self.groups]
         self.p_y = tools.p_vec(y)
+        self.p_a = tools.p_vec(a)
         self.n_classes = self.p_y.shape[0]
         
         # Getting some basic info for each group
@@ -627,7 +627,8 @@ class MulticlassBalancer:
         group_ids = [np.where(a == g) for g in self.groups]
         
         # Getting the group-specific P(Y), P(Y- | Y), and constraint matrices
-        self.p_vecs = np.array([tools.p_vec(y[ids]) for ids in group_ids])
+        p_vecs = np.array([tools.p_vec(y[ids]) for ids in group_ids])
+        self.p_vecs = self.p_a.reshape(-1, 1) * p_vecs
         self.cp_mats = np.array([tools.cp_mat(y[ids], y_[ids]) 
                                  for ids in group_ids])
         
@@ -765,11 +766,10 @@ class MulticlassBalancer:
             self.obj = np.tile(np.repeat(self.p_y, 3), 3) * macro
         
         elif obj == 'micro':
-            tpr_sums = [np.dot(self.p_vecs[i], tprs[i][0]) 
-                        for i in range(self.n_groups)]
-            micro = np.array([tpr_sums[i] * self.group_probs[i]
-                              for i in range(self.n_groups)])
-            self.obj = -1 * micro.flatten()
+            tprs = constraints[:, 0, :]
+            tpr_sums = np.array([np.dot(self.p_vecs[i], tprs[i]) 
+                        for i in range(self.n_groups)])
+            self.obj = -1 * tpr_sums.flatten()
         
         # Arranging the constraint weights by group comparisons
         tpr_cons, fpr_cons, norm_cons = self.__pair_constraints(constraints)
