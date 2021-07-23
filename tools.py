@@ -916,50 +916,32 @@ def pars_to_cpmat(opt, n_groups=3, n_classes=3):
 
 def parmat_to_roc(par_mats,
                   p_vecs,
-                  cp_mats,
-                  n_groups=3, 
-                  n_classes=3):
+                  cp_mats):
     '''Takes the tensor of parameters from the LP and gets sensitivity and 
     specificity for each group.
     '''
+    n_groups = len(p_vecs)
+    n_classes = len(p_vecs[0])
     rocs = np.zeros(shape=(n_groups, n_classes, 2))
     for i, par_mat in enumerate(par_mats):
         p = p_vecs[i]
         M = cp_mats[i]
-        rocs[i, :, 0] = np.diag(np.dot(M, par_mat))
+        rocs[i, :, 1] = np.diag(np.dot(M, par_mat))
         for j in range(n_classes):
             weights = np.dot(np.delete(p, j), np.delete(M, j, 0))
             weights /= np.sum(np.delete(p, j))
-            rocs[i, j, 1] = np.dot(weights, par_mat[:, j])
+            rocs[i, j, 0] = np.dot(weights, par_mat[:, j])
     return rocs
 
 
-def get_constraints(p_vec, cp_mat):
-    '''Calculates TPR and FPR weights for the constraint matrix'''
-    # Shortening the vars to keep things clean
-    p = p_vec
-    M = cp_mat
+def cpmat_to_roc(p_vec, cp_mat):
+    '''Converts a conditional probability matrix to ROC scores'''
+    tprs = np.diag(cp_mat)
+    fprs = [np.dot(np.delete(p_vec, i), np.delete(cp_mat[:, i], i)) / 
+           np.sum(np.delete(p_vec, i)) for i in range(cp_mat.shape[0])]
+    out = pd.DataFrame([fprs, tprs]).T
+    out.columns = ['fpr', 'tpr']
+    return out
     
-    # Setting up the matrix of parameter weights
-    n_classes = M.shape[0]
-    n_params = n_classes**2
-    tpr = np.zeros(shape=(n_classes, n_params))
-    fpr = np.zeros(shape=(n_classes, n_params))
-    off = np.zeros(shape=(n_classes, n_classes - 1, n_params))
     
-    # Filling in the weights
-    for i in range(n_classes):
-        # Dropping row to calculate FPR
-        p_i = np.delete(p, i)
-        M_i = np.delete(M, i, 0)
-        
-        start = i * (n_classes)
-        end = start + n_classes
-        fpr[i, start:end] = np.dot(p_i, M_i) / p_i.sum()
-        tpr[i, start:end] = M[i]
-        
-        for j in range(n_classes - 1):
-            off[i, j, start:end] = M_i[j]
     
-    return tpr, fpr, np.concatenate(off, 0)
-        

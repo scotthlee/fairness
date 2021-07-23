@@ -532,12 +532,12 @@ class MulticlassBalancer:
         Parameters
         ----------
         y : array-like of shape (n_samples,) or str
-            The true labels, either as a binary array or as a string \
+            The true labels, either as an array or as a string \
             specifying a column in data. 
         
         y_ : array-like of shape (n_samples,) or str
-            The predicted labels, either as an int (predictions) or float \
-            (probabilities) array, or as a string specifying a column in data.
+            The predicted labels, either as an array or as a string \
+            specifying a column in data.
         
         a : array-like of shape (n_samples,) or str
             The protected attribute, either as an array, or as a string \
@@ -549,11 +549,6 @@ class MulticlassBalancer:
         summary : bool, default True
             Whether to print pre-adjustment false-positive and true-positive \
             rates for each group.
-        
-        threshold_objective : str, default 'j'
-            Objective to use in evaluating thresholds when y_ contains \
-            probabilities. Default is Youden's J index, or TPR - (1 - FPR) + 1.
-        
         
         Attributes
         ----------
@@ -836,9 +831,7 @@ class MulticlassBalancer:
         # Calculating group-specific ROC scores from the new parameters
         self.rocs = tools.parmat_to_roc(self.m,
                                         self.p_vecs,
-                                        self.cp_mats,
-                                        n_groups=self.n_groups,
-                                        n_classes=self.n_classes)
+                                        self.cp_mats)
         
         if summary:
             self.summary(org=False)
