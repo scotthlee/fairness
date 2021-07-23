@@ -626,6 +626,7 @@ class MulticlassBalancer:
         self.p_vecs = self.p_a.reshape(-1, 1) * p_vecs
         self.cp_mats = np.array([tools.cp_mat(y[ids], y_[ids]) 
                                  for ids in group_ids])
+        self.cp_mat = tools.cp_mat(y, y_)
         
         if summary:
             pass
@@ -1060,7 +1061,7 @@ class MulticlassBalancer:
         
         plt.show()
     
-    def summary(self, org=True, adj=True):
+    def summary(self, org=True, adj=True, round=4):
         """Prints a summary with FPRs and TPRs for each group.
         
         Parameters:
@@ -1071,15 +1072,18 @@ class MulticlassBalancer:
                 Whether to print results for the adjusted predictions.
         """
         if org:
-            org_coords = tools.group_roc_coords(self.__y, self.__y_, self.__a)
-            org_loss = 1 - self.overall_rates.acc
+            org_loss = 1 - np.dot(self.p_y, np.diag(self.cp_mat))
             print('\nPre-adjustment group rates are \n')
-            print(org_coords.to_string(index=False))
+            for i in range(self.n_groups):
+                group_stats = tools.cpmat_to_roc(self.p_vecs[i],
+                                                 self.cp_mats[i]).round(round)
+                print(self.groups[i])
+                print(group_stats.to_string(index=False) + '\n')
             print('\nAnd loss is %.4f\n' %org_loss)
         
         if adj:
-            adj_coords = tools.group_roc_coords(self.__y, self.y_adj, self.__a)
-            adj_loss = 1 - tools.CLFRates(self.__y, self.y_adj).acc
+            adj_coords = pd.DataFrame(self.rocs[0],
+                                      columns=['fpr', 'tpr'])
             print('\nPost-adjustment group rates are \n')
             print(adj_coords.to_string(index=False))
             print('\nAnd loss is %.4f\n' %adj_loss)
