@@ -779,22 +779,23 @@ class MulticlassBalancer:
         # Setting the objective for optimization
         if loss == 'macro':
             self.obj = -1 * self.cp_mats.flatten()
+            '''
+            # Alternative form as the sum of the off-diagonals
+            off_loss = [[np.delete(a, i, 0).sum(0) 
+                         for i in range(self.n_classes)]
+                        for a in self.cp_mats]
+            self.obj = np.array(off_loss).flatten()
+            '''
         
         elif loss == 'w_macro':
             macro = -1 * self.cp_mats.flatten()
             self.obj = np.tile(np.repeat(self.p_y, 3), 3) * macro
         
         elif loss == 'micro':
-            off_loss = [[np.delete(a, i, 0).sum(0) 
-                         for i in range(self.n_classes)]
-                        for a in self.cp_mats]
-            self.obj = np.array(off_loss).flatten()
-            '''
             tprs = np.array([c[0] for c in constraints])
             tpr_sums = np.array([np.dot(self.p_vecs[i], tprs[i]) 
                         for i in range(self.n_groups)])
             self.obj = -1 * tpr_sums.flatten()
-            '''
         
         # Arranging the constraint weights by group comparisons
         tpr_cons, fpr_cons, off_cons, norm_cons = self.__pair_constraints(
