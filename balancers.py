@@ -788,7 +788,6 @@ class MulticlassBalancer:
             off_loss = [[np.delete(a, i, 0).sum(0) 
                          for i in range(self.n_classes)]
                         for a in self.cp_mats]
-            off_loss = 
             self.obj = np.array(off_loss).flatten()
             '''
             tprs = np.array([c[0] for c in constraints])
