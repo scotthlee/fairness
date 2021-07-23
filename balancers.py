@@ -772,26 +772,36 @@ class MulticlassBalancer:
                                for i in range(self.n_groups)]
         self.constraints = constraints
         
-        # Setting the objective for optimization
+        # First option is macro loss, or the sum of the unweighted
+        # conditional probabilities from above
         if loss == 'macro':
-            self.obj = -1 * self.cp_mats.flatten()
-            '''
-            # Alternative form as the sum of the off-diagonals
             off_loss = [[np.delete(a, i, 0).sum(0) 
                          for i in range(self.n_classes)]
                         for a in self.cp_mats]
             self.obj = np.array(off_loss).flatten()
+            
+            '''
+            self.obj = -1 * self.cp_mats.flatten()
             '''
         
+        # Next option is weighted macro, which weights the conditional
+        # sums by the baseline class (not group) probabilities
         elif loss == 'w_macro':
-            macro = -1 * self.cp_mats.flatten()
-            self.obj = np.tile(np.repeat(self.p_y, 3), 3) * macro
+            pass
         
+        # And finally is micro, which weights each 
         elif loss == 'micro':
-            tprs = np.array([c[0] for c in constraints])
-            tpr_sums = np.array([np.dot(self.p_vecs[i], tprs[i]) 
-                        for i in range(self.n_groups)])
-            self.obj = -1 * tpr_sums.flatten()
+            u = np.array([[np.delete(a, i, 0)
+                           for i in range(self.n_classes)]
+                          for a in self.cp_mats])
+            p = np.array([[np.delete(a, i).reshape(-1, 1)
+                           for i in range(self.n_classes)]
+                          for a in self.p_vecs])
+            w = np.array([[p[i, j] * u[i, j]
+                           for j in range(self.n_classes)]
+                          for i in range(self.n_groups)])
+            self.w = w
+            self.obj = w.sum(2).flatten()
         
         # Arranging the constraint weights by group comparisons
         tpr_cons, fpr_cons, off_cons, norm_cons = self.__pair_constraints(
@@ -1082,9 +1092,11 @@ class MulticlassBalancer:
             print('\nAnd loss is %.4f\n' %org_loss)
         
         if adj:
+            # Casting the post-adjustment ROC scores as a DF
             adj_coords = pd.DataFrame(self.rocs[0],
-                                      columns=['fpr', 'tpr'])
-            print('\nPost-adjustment group rates are \n')
+                                      columns=['fpr', 'tpr']).round(round)
+            adj_loss = 1 - np.sum(self.p_y * adj_coords.tpr.values)
+            print('\nPost-adjustment rates for all groups are \n')
             print(adj_coords.to_string(index=False))
             print('\nAnd loss is %.4f\n' %adj_loss)
 
