@@ -642,13 +642,14 @@ class MulticlassBalancer:
         p = p_vec
         M = cp_mat
         
-        # Setting up the matrix of parameters
+        # Setting up the matrix of parameter weights
         n_classes = M.shape[0]
         n_params = n_classes**2
         tpr = np.zeros(shape=(n_classes, n_params))
         fpr = np.zeros(shape=(n_classes, n_params))
+        off = np.zeros(shape=(n_classes, n_classes - 1, n_params))
         
-        # Getting weights for the first n-1 classes
+        # Filling in the weights
         for i in range(n_classes):
             # Dropping row to calculate FPR
             p_i = np.delete(p, i)
@@ -658,16 +659,23 @@ class MulticlassBalancer:
             end = start + n_classes
             fpr[i, start:end] = np.dot(p_i, M_i) / p_i.sum()
             tpr[i, start:end] = M[i]
+            
+            for j in range(n_classes - 1):
+                off[i, j, start:end] = M_i[j]
         
-        return tpr, fpr
+        # Reshaping the off-diagonal constraints
+        off = np.concatenate(off, 0)
+        
+        return tpr, fpr, off
     
     def __pair_constraints(self, constraints):
         '''Takes the output of constraint_weights() and returns a matrix 
         of the pairwise constraints
         '''
         # Setting up the preliminaries
-        tprs = constraints[:, 0, :]
-        fprs = constraints[:, 1, :]
+        tprs = np.array([c[0] for c in constraints])
+        fprs = np.array([c[1] for c in constraints])
+        off = np.array([c[2] for c in constraints])
         n_params = tprs.shape[2]
         n_classes = tprs.shape[1]
         n_groups = self.n_groups
@@ -682,6 +690,10 @@ class MulticlassBalancer:
         fpr_cons = np.zeros(shape=(n_pairs,
                                    n_groups,
                                    n_classes,
+                                   n_params))
+        off_cons = np.zeros(shape=(n_pairs,
+                                   n_groups,
+                                   n_classes * (n_classes - 1),
                                    n_params))
         
         # Filling in the constraint comparisons
@@ -698,6 +710,8 @@ class MulticlassBalancer:
             tpr_cons[i, c[1]] = tpr_flip * -1 * tprs[c[1]]
             fpr_cons[i, c[0]] = fpr_flip * fprs[c[0]]
             fpr_cons[i, c[1]] = fpr_flip * -1 * fprs[c[1]]
+            off_cons[i, c[0]] = off[c[0]]
+            off_cons[i, c[1]] = off[c[1]]
         
         # Filling in the norm constraints
         one_cons = np.zeros(shape=(n_groups * n_classes,
@@ -715,12 +729,13 @@ class MulticlassBalancer:
         # Reshaping the arrays
         tpr_cons = np.concatenate([np.hstack(m) for m in tpr_cons])
         fpr_cons = np.concatenate([np.hstack(m) for m in fpr_cons])
+        off_cons = np.concatenate([np.hstack(m) for m in off_cons])
         
-        return tpr_cons, fpr_cons, one_cons
+        return tpr_cons, fpr_cons, off_cons, one_cons
     
     def adjust(self,
                goal='odds',
-               obj='macro',
+               loss='macro',
                round=4,
                return_optima=False,
                summary=False,
@@ -732,6 +747,9 @@ class MulticlassBalancer:
         goal : {'odds', 'opportunity'}, default 'odds'
             The constraint to be satisifed. Equalized odds and equal \
             opportunity are currently supported.
+        
+        loss : {'macro', 'w_macro', 'micro'}, default 'macro'
+            The loss function to optimize.
         
         round : int, default 4
             Decimal places for rounding results.
@@ -753,26 +771,36 @@ class MulticlassBalancer:
             The optimal loss and ROC coordinates after adjustment.    
         """
         # Getting the costraint weights
-        constraints = np.array([self.__get_constraints(self.p_vecs[i],
-                                                      self.cp_mats[i])
-                               for i in range(self.n_groups)])
+        constraints = [self.__get_constraints(self.p_vecs[i],
+                                              self.cp_mats[i])
+                               for i in range(self.n_groups)]
+        self.constraints = constraints
         
         # Setting the objective for optimization
-        if obj == 'macro':
+        if loss == 'macro':
             self.obj = -1 * self.cp_mats.flatten()
         
-        elif obj == 'w_macro':
+        elif loss == 'w_macro':
             macro = -1 * self.cp_mats.flatten()
             self.obj = np.tile(np.repeat(self.p_y, 3), 3) * macro
         
-        elif obj == 'micro':
-            tprs = constraints[:, 0, :]
+        elif loss == 'micro':
+            off_loss = [[np.delete(a, i, 0).sum(0) 
+                         for i in range(self.n_classes)]
+                        for a in self.cp_mats]
+            off_loss = 
+            self.obj = np.array(off_loss).flatten()
+            '''
+            tprs = np.array([c[0] for c in constraints])
             tpr_sums = np.array([np.dot(self.p_vecs[i], tprs[i]) 
                         for i in range(self.n_groups)])
             self.obj = -1 * tpr_sums.flatten()
+            '''
         
         # Arranging the constraint weights by group comparisons
-        tpr_cons, fpr_cons, norm_cons = self.__pair_constraints(constraints)
+        tpr_cons, fpr_cons, off_cons, norm_cons = self.__pair_constraints(
+            constraints
+            )
         
         # Normazliation bounds; used in all scenarios
         norm_bounds = np.repeat(1, norm_cons.shape[0])
@@ -787,6 +815,11 @@ class MulticlassBalancer:
             con = np.concatenate([tpr_cons, norm_cons])
             tpr_bounds = np.repeat(0, tpr_cons.shape[0])
             con_bounds = np.concatenate([tpr_bounds, norm_bounds])
+        
+        elif 'strict' in goal:
+            con = np.concatenate([off_cons, norm_cons])
+            off_bounds = np.repeat(0, off_cons.shape[0])
+            con_bounds = np.concatenate([off_bounds, norm_bounds])
         
         # Running the optimization
         self.opt = sp.optimize.linprog(c=self.obj,

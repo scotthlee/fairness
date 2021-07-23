@@ -932,4 +932,34 @@ def parmat_to_roc(par_mats,
             weights /= np.sum(np.delete(p, j))
             rocs[i, j, 1] = np.dot(weights, par_mat[:, j])
     return rocs
+
+
+def get_constraints(p_vec, cp_mat):
+    '''Calculates TPR and FPR weights for the constraint matrix'''
+    # Shortening the vars to keep things clean
+    p = p_vec
+    M = cp_mat
+    
+    # Setting up the matrix of parameter weights
+    n_classes = M.shape[0]
+    n_params = n_classes**2
+    tpr = np.zeros(shape=(n_classes, n_params))
+    fpr = np.zeros(shape=(n_classes, n_params))
+    off = np.zeros(shape=(n_classes, n_classes - 1, n_params))
+    
+    # Filling in the weights
+    for i in range(n_classes):
+        # Dropping row to calculate FPR
+        p_i = np.delete(p, i)
+        M_i = np.delete(M, i, 0)
+        
+        start = i * (n_classes)
+        end = start + n_classes
+        fpr[i, start:end] = np.dot(p_i, M_i) / p_i.sum()
+        tpr[i, start:end] = M[i]
+        
+        for j in range(n_classes - 1):
+            off[i, j, start:end] = M_i[j]
+    
+    return tpr, fpr, np.concatenate(off, 0)
         

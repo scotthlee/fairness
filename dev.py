@@ -15,4 +15,4 @@ a = df.animal
 
 # Trying the balancer
 mb = balancers.MulticlassBalancer(y, y_, a)
-mb.adjust(obj='macro')
+mb.adjust(loss='macro')
