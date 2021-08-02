@@ -190,6 +190,7 @@ class BinaryBalancer:
         # Getting the overall error rates and group proportions
         s = self.overall_rates.acc
         e = 1 - s
+        print(s, e, s - e, e - s)
         
         # Setting up the coefficients for the objective function
         obj_coefs = np.array([[(s - e) * r[0], 
@@ -527,6 +528,7 @@ class MulticlassBalancer:
                  data=None,
                  summary=False,
                  threshold_objective='j'):
+
         """Initializes an instance of a PredictionBalancer.
         
         Parameters
@@ -626,6 +628,12 @@ class MulticlassBalancer:
         self.p_vecs = self.p_a.reshape(-1, 1) * p_vecs
         self.cp_mats = np.array([tools.cp_mat(y[ids], y_[ids]) 
                                  for ids in group_ids])
+        self.cp_mats_t = np.zeros(
+                (self.n_classes, self.n_classes, self.n_groups)
+        )
+        for a in range(self.n_groups):
+            self.cp_mats_t[:, :, a] = self.cp_mats[a].transpose()
+
         self.cp_mat = tools.cp_mat(y, y_)
         
         if summary:
@@ -728,6 +736,237 @@ class MulticlassBalancer:
         off_cons = np.concatenate([np.hstack(m) for m in off_cons])
         
         return tpr_cons, fpr_cons, off_cons, one_cons
+
+    def adjust_new(self,
+               goal='odds',
+               loss='0-1',
+               round=4,
+               return_optima=False,
+               summary=False,
+               binom=False):
+        """Adjusts predictions to satisfy a fairness constraint.
+        
+        Parameters
+        ----------
+        goal : {'odds', 'opportunity', 'strict'}, default 'odds'
+            The constraint to be satisifed. Equalized odds sets the TPR and FPR rates
+            equal. Opportunity only sets TPR to be equal. Strict sets all off-diagonal
+            entries of the confusion matrix to be equal, and may not create a feasible
+            linear program.
+        
+        loss : {'0-1'} default '0-1'
+            The loss function to optimize in expectation
+        
+        round : int, default 4
+            Decimal places for rounding results.
+        
+        return_optima: bool, default True
+            Whether to reutn optimal loss and ROC coordinates.
+        
+        summary : bool, default True
+            Whether to print post-adjustment false-positive and true-positive \
+            rates for each group.
+        
+        binom : bool, default False
+            Whether to generate adjusted predictions by sampling from a \
+            binomial distribution.
+        
+        Returns
+        -------
+        (optional) optima : dict
+            The optimal loss and ROC coordinates after adjustment.    
+        """
+        # note: self.p_vecs contains the joint group probabilities of y and a
+        #       self.cp_mats contains the probabilities of y^ given y and a
+        #       self.cp_mat contains the probabilities of y^ given y
+        # the above should be added to the attributes doc string
+
+        if loss == '0-1':
+            loss_coefs = self.get_0_1_loss_coefs()
+        else:
+            raise ValueError('Loss type %s not recognized' %loss)
+
+        # Create a n_constraints by
+        # n_classes (y~) by n_classes (y^) by n_groups matrix of
+        # constraints, adding in additional constraints as needed 
+        # to the first dim
+        
+        if goal == 'odds':
+            cons_mat = self.get_equal_odds_constraints()
+        elif goal == 'opportunity':
+            cons_mat = self.get_equal_opp_constraints()
+        elif goal == 'strict':
+            cons_mat = self.get_strict_constraints()
+        else:
+            raise ValueError('Fairness type/goal %s not recognized' %goal)
+
+        # Add in constraint for derived probabilities to sum to one
+        # for every fixed group and (true) class they should be
+        # normalized, so one constraint for every (group, class) pair
+        cons_norm = np.zeros(
+            (self.n_groups * self.n_classes,
+            self.n_classes, self.n_classes, self.n_groups)
+        )
+        for con_idx in range(cons_norm.shape[0]):
+            c = con_idx % int(self.n_classes)
+            g = con_idx // int(self.n_classes)
+            cons_norm[con_idx, c, :, g] = np.ones(self.n_classes)
+        cons_norm = cons_norm.reshape(cons_norm.shape[0], -1)
+        cons_mat = np.concatenate([cons_mat, cons_norm], axis=0)            
+        #print(cons_mat)
+            
+
+        # Form the bounds of the constraints:
+        #    For odds/opp/strict these are 0 since they are equalities.
+        #    For the normalization constraints these are 1
+        cons_bounds = np.zeros(cons_mat.shape[0])
+        cons_bounds[-cons_norm.shape[0]:] = 1
+
+        self.opt = sp.optimize.linprog(c=loss_coefs,
+                                       bounds=[0, 1],
+                                       A_eq=cons_mat,
+                                       b_eq=cons_bounds,
+                                       method='highs')
+  
+        print(self.opt)
+        y_derived = self.opt.x.reshape([self.n_classes, self.n_classes, self.n_groups])
+        self.m = y_derived
+        print('checking diagonal of W with cp_mats_t')
+        print([self.cp_mats_t[:, i, 0] @ self.m[:, i, 0] for i in range(self.n_classes)])
+        print([self.cp_mats_t[:, i, 1] @ self.m[:, i, 1] for i in range(self.n_classes)])
+#        print([self.cp_mats_t[:, i, 2] @ self.m[:, i, 2] for i in range(self.n_classes)])
+
+        print('checking diagonal of W with cp_mats')
+        print(self.cp_mats[0, 0, :] @ self.m[:, 0, 0])
+        print(self.cp_mats[1, 0, :] @ self.m[:, 0, 1])
+
+        print('--------------Learned derived predictions-------------')
+        print(self.m[:, :, 0])
+        print(self.m[:, :, 1])
+ #       print(self.m[:, :, 2])
+        print('checking the W matrix')
+        W = np.einsum('ijk, jlk->ilk', self.cp_mats_t.transpose((1, 0, 2)), self.m)
+        print(W[:, :, 0])
+        print(W[:, :, 1])
+  #      print(W[:, :, 2])
+        self.rocs = tools.parmat_to_roc(y_derived, self.p_vecs, self.cp_mats)
+
+        self.con = cons_mat
+        self.con_bounds = cons_bounds
+
+        if summary:
+            self.summary(org=False)
+            
+        if return_optima:
+            return {'loss': self.theoretical_loss, 'roc': self.roc}
+
+    def get_0_1_loss_coefs(self):
+        coefs = np.zeros((self.n_classes, self.n_classes, self.n_groups))
+        for c in range(self.n_classes):
+            # Form |C| X |A| vector of joint probabilities of y and a
+            # for summation over the mismatches between derived y and
+            # true labels
+            pred_mismatch = np.ones((self.n_classes, 1))
+            pred_mismatch[c] = 0
+            p = self.p_vecs.transpose() * pred_mismatch
+            
+            # matrix product across first two dimensions
+            coefs[:, c, :] = np.einsum('ijk,jk->ik', self.cp_mats_t, p)
+        return coefs.flatten()
+
+
+    def get_equal_odds_constraints(self):
+
+        # equal opportunity constrains TPR to be equal
+        tpr_cons = self.get_equal_opp_constraints()
+
+        # constrain FPR to be equal
+        fpr_cons = self.get_fpr_cons()
+
+        equal_odds_cons = np.concatenate([tpr_cons, fpr_cons], axis=0)
+        return equal_odds_cons
+ 
+    def get_fpr_cons(self):
+        # form intermediate matrix
+        V = np.zeros((self.n_classes, self.n_classes, self.n_groups))
+        for c in range(self.n_classes):
+            # Form |C| X |A| vector of joint probabilities of y and a
+            # for summation over the mismatches between derived y and
+            # true labels
+            pred_mismatch = np.ones((self.n_classes, 1))
+            pred_mismatch[c] = 0
+            p_mis = self.p_vecs.transpose() * pred_mismatch
+            
+            # matrix product across first two dimensions
+            temp = np.einsum('ijk,jk->ik', self.cp_mats_t, p_mis)
+            V[:, c, :] = temp/np.sum(p_mis, axis=0)
+        full_cons = self.get_equal_cons_given_mat(np.transpose(V, axes=[1, 0, 2]))
+        # only need diagonals to be equal, so select diagonals
+        fp_cons = np.einsum('ijjklm -> ijklm', full_cons)
+        return fp_cons.reshape((self.n_groups - 1) * self.n_classes, -1)
+
+
+    def get_equal_opp_constraints(self):
+        full_cons = self.get_equal_cons_given_mat(np.transpose(self.cp_mats_t, axes=(1, 0, 2)))
+        # only need diagonals to be equal, so select diagonals
+        tp_cons = np.einsum('ijjklm -> ijklm', full_cons)
+        return tp_cons.reshape((self.n_groups - 1) * self.n_classes, -1)
+
+    def get_strict_constraints(self):
+        cons = self.get_equal_cons_given_mat(np.transpose(self.cp_mats_t, axes=(1, 0, 2)))
+        return cons.reshape((self.n_groups - 1) * self.n_classes**2, -1)
+
+    def get_equal_cons_given_mat(self, M):
+        '''Given some matrix A of values desired to be fair across
+        protected attributes, and which can be decomposed as A = M * P^T
+        where P^T are the derived probabilities given the predicted label, 
+        compute the constraints needed to enforce fairness for all values of
+        A across groups. Assumes P is shaped y_derived by y_pred by group.
+
+        Parameters
+        ----------
+        M: Three dimensional np array in the decomposition A = M * P^T. 
+            Must have shape (n_classes, n_classes, n_groups).
+
+        Returns
+        -------
+        The constraints as a np array with shape:
+            (n_groups - 1, n_classes, n_classes, n_classes, n_classes, n_groups)
+            organized as follows:
+                dim 0 - Represents setting A equal across groups in pairs group i
+                    and i + 1. So entry 0 along this dim sets A equal across group 0
+                    and 1. Entry 1 sets A equal across group 1 and group 2 etc.
+                dim 1 and 2 - Represent setting each entry within A (A_{ij}) equal 
+                    across groups for a given equality between groups i and i + 1. 
+                dim 3, 4 and 5 - Represent the constraint coefficients of P
+
+        '''
+        # Precompute matrix S which selects the correct rows from P^T and
+        # columns from M to compute element A_{ij}. First two dims are for
+        # the dimensions of A, last three dims are over the coefficients
+        # of P^T
+        S = np.zeros(
+                (self.n_classes, self.n_classes,
+                self.n_classes, self.n_classes, self.n_groups)
+        )
+        for i in range(self.n_classes):
+            for j in range(self.n_classes):
+                # selecting the ith row of M as the
+                # coefficients of the jth column of P^T
+                # for computing A_ij
+                S[i, j, :, j] = M[i, :] 
+
+        cons = np.zeros(
+                (self.n_groups - 1, self.n_classes, self.n_classes,
+                self.n_classes, self.n_classes, self.n_groups)
+        )
+        for g in range(self.n_groups - 1):
+            cons[g, :, :, :, :, g] = S[:, :, :, :, g]
+            cons[g, :, :, :, :, g + 1] = -S[:, :, :, :, g + 1]
+        return cons    
+        
+    
+        
     
     def adjust(self,
                goal='odds',
@@ -836,6 +1075,8 @@ class MulticlassBalancer:
                                        A_eq=con,
                                        b_eq=con_bounds,
                                        method='highs')
+        print('SCOTTS VERSION')
+        print(self.opt)
         
         # Getting the Y~ matrices
         self.m = tools.pars_to_cpmat(self.opt,
