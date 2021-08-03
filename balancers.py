@@ -722,7 +722,6 @@ class MulticlassBalancer:
                                    n_groups * n_classes**2, 
                                    n_classes)))
         cols = cols.reshape(n_groups, n_classes)
-        print(cols)
         i = 0
         for c in cols:
             for j in range(n_classes):
