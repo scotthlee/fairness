@@ -598,7 +598,7 @@ class MulticlassBalancer:
             y = data[y].values
             y_ = data[y_].values
             a = data[a].values
-            
+        
         # Setting the targets
         self.__y = y
         self.__y_ = y_
