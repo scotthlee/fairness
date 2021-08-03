@@ -190,7 +190,6 @@ class BinaryBalancer:
         # Getting the overall error rates and group proportions
         s = self.overall_rates.acc
         e = 1 - s
-        print(s, e, s - e, e - s)
         
         # Setting up the coefficients for the objective function
         obj_coefs = np.array([[(s - e) * r[0], 
@@ -678,12 +677,17 @@ class MulticlassBalancer:
         '''
         # Setting up the preliminaries
         tprs = np.array([c[0] for c in constraints])
+        print(tprs)
         fprs = np.array([c[1] for c in constraints])
         off = np.array([c[2] for c in constraints])
         n_params = tprs.shape[2]
         n_classes = tprs.shape[1]
         n_groups = self.n_groups
-        group_combos = list(combinations(range(n_groups), 2))[:-1]
+        if n_groups > 2:
+            group_combos = list(combinations(range(n_groups), 2))[:-1]
+        else:
+            group_combos = [(0, 1)]
+            
         n_pairs = len(group_combos)
         
         # Setting up the empty matrices
