@@ -723,7 +723,7 @@ class MulticlassBalancer:
         
         # Filling in the norm constraints
         one_cons = np.zeros(shape=(n_groups * n_classes,
-                                   n_classes * n_params))
+                                   n_groups * n_params))
         cols = np.array(list(range(0, 
                                    n_groups * n_classes**2, 
                                    n_classes)))
