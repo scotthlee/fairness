@@ -170,9 +170,11 @@ def group_roc_coords(y, y_, a, round=4):
 def pred_from_pya(y_, a, pya, binom=False):
     # Getting the groups and making the initially all-zero predictor
     groups = np.unique(a)
-    out = np.zeros(y_.shape[0])
+    out = deepcopy(y_)
     
     for i, g in enumerate(groups):
+        group_ids = np.where((a == g))[0]
+        
         # Pulling the fitted switch probabilities for the group
         p = pya[i]
         
@@ -190,10 +192,7 @@ def pred_from_pya(y_, a, pya, binom=False):
                                         replace=False)
             samp = np.concatenate((pos_samp, neg_samp)).flatten()
             out[samp] = 1
-        else:
-            # Getting the 1s from a binomial draw for extra randomness 
-            out[pos] = np.random.binomial(1, p[1], len(pos))
-            out[neg] = np.random.binomial(1, p[0], len(neg))
+            out[np.setdiff1d(group_ids, samp)] = 0
     
     return out.astype(np.uint8)
 

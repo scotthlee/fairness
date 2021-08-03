@@ -150,7 +150,7 @@ class BinaryBalancer:
     def adjust(self,
                goal='odds',
                round=4,
-               return_optima=True,
+               return_optima=False,
                summary=True,
                binom=False):
         """Adjusts predictions to satisfy a fairness constraint.
