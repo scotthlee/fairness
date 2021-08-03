@@ -675,7 +675,13 @@ class MulticlassBalancer:
         n_params = tprs.shape[2]
         n_classes = tprs.shape[1]
         n_groups = self.n_groups
-        group_combos = list(combinations(range(n_groups), 2))[:-1]
+        
+        # Setting the group combinations; only important when the protected
+        # attribute has more than two levels
+        if n_groups > 2:
+            group_combos = list(combinations(range(n_groups), 2))[:-1]
+        else:
+            group_combos = [(0, 1)]
         n_pairs = len(group_combos)
         
         # Setting up the empty matrices
