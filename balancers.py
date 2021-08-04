@@ -525,7 +525,7 @@ class MulticlassBalancer:
                  y_,
                  a,
                  data=None,
-                 summary=False,
+                 summary=True,
                  threshold_objective='j'):
         """Initializes an instance of a PredictionBalancer.
         
@@ -629,7 +629,6 @@ class MulticlassBalancer:
         self.cp_mat = tools.cp_mat(y, y_)
         
         if summary:
-            pass
             self.summary(adj=False)
     
     def __get_constraints(self, p_vec, cp_mat):
@@ -740,7 +739,7 @@ class MulticlassBalancer:
                loss='macro',
                round=4,
                return_optima=False,
-               summary=False,
+               summary=True,
                binom=False):
         """Adjusts predictions to satisfy a fairness constraint.
         
@@ -819,16 +818,19 @@ class MulticlassBalancer:
         
         # Choosing the constraint conditions
         if 'odds' in goal:
+            self.goal = 'equalized_odds'
             con = np.concatenate([tpr_cons, fpr_cons, norm_cons])
             eo_bounds = np.repeat(0, tpr_cons.shape[0] * 2)
             con_bounds = np.concatenate([eo_bounds, norm_bounds])
         
         elif 'opportunity' in goal:
+            self.goal = 'equal_opportunity'
             con = np.concatenate([tpr_cons, norm_cons])
             tpr_bounds = np.repeat(0, tpr_cons.shape[0])
             con_bounds = np.concatenate([tpr_bounds, norm_bounds])
         
         elif 'strict' in goal:
+            self.goal = 'strict_equivalence'
             con = np.concatenate([off_cons, norm_cons])
             off_bounds = np.repeat(0, off_cons.shape[0])
             con_bounds = np.concatenate([off_bounds, norm_bounds])
@@ -1102,7 +1104,18 @@ class MulticlassBalancer:
             adj_coords = pd.DataFrame(self.rocs[0],
                                       columns=['fpr', 'tpr']).round(round)
             adj_loss = 1 - np.sum(self.p_y * adj_coords.tpr.values)
-            print('\nPost-adjustment rates for all groups are \n')
-            print(adj_coords.to_string(index=False))
+            
+            if self.goal == 'equal_opportunity':
+                print('\nPost-adjustment rates are \n')
+                for i in range(self.n_groups):
+                    group_stats = pd.DataFrame(self.rocs[i],
+                                               columns=['fpr', 'tpr'])
+                    group_stats = group_stats.round(round)
+                    print(self.groups[i])
+                    print(group_stats.to_string(index=False) + '\n')
+            else:
+                print('\nPost-adjustment rates for all groups are \n')
+                print(adj_coords.to_string(index=False))
+            
             print('\nAnd loss is %.4f\n' %adj_loss)
 
