@@ -71,3 +71,8 @@ mb.adjust_new(loss='0-1', goal='odds')
 #mb = balancers.MulticlassBalancer(y, y_, a)
 #mb.adjust(loss='micro')
 
+print('TESTING DEMOGRAPHIC PARITY')
+mb = balancers.MulticlassBalancer(y, y_, a)
+mb.adjust_new(loss='0-1', goal='demographic_parity')
+
+

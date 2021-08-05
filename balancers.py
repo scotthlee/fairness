@@ -624,6 +624,8 @@ class MulticlassBalancer:
         
         # Getting the group-specific P(Y), P(Y- | Y), and constraint matrices
         p_vecs = np.array([tools.p_vec(y[ids]) for ids in group_ids])
+        p_pred_vecs = np.array([tools.p_vec(y_[ids]) for ids in group_ids])
+        self.p_pred_vecs = self.p_a.reshape(-1, 1) * p_pred_vecs
         self.p_vecs = self.p_a.reshape(-1, 1) * p_vecs
         self.cp_mats = np.array([tools.cp_mat(y[ids], y_[ids]) 
                                  for ids in group_ids])
@@ -801,6 +803,8 @@ class MulticlassBalancer:
             cons_mat = self.get_equal_opp_constraints()
         elif goal == 'strict':
             cons_mat = self.get_strict_constraints()
+        elif goal == 'demographic_parity':
+            cons_mat = self.get_demographic_parity_constraints()
         else:
             raise ValueError('Fairness type/goal %s not recognized' %goal)
 
@@ -919,6 +923,17 @@ class MulticlassBalancer:
     def get_strict_constraints(self):
         cons = self.get_equal_cons_given_mat(np.transpose(self.cp_mats_t, axes=(1, 0, 2)))
         return cons.reshape((self.n_groups - 1) * self.n_classes**2, -1)
+
+    def get_demographic_parity_constraints(self):
+        p_pred_vecs = self.p_pred_vecs.transpose() # to have shape |C| X |A|
+        J = p_pred_vecs/(np.sum(p_pred_vecs, axis=0))
+        J = J.reshape((self.n_classes, 1, self.n_groups))
+        # repeat so it works with get_equal_cons_given_mat
+        J = np.ones((self.n_classes, self.n_classes, self.n_groups)) * J
+        cons = self.get_equal_cons_given_mat(J.transpose(1, 0, 2))
+        cons = cons[:, 0, :] # all rows will turn out the same
+        return cons.reshape((self.n_groups - 1) * self.n_classes, -1)
+        
 
     def get_equal_cons_given_mat(self, M):
         '''Given some matrix A of values desired to be fair across
