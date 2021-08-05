@@ -5,7 +5,10 @@ from scipy.optimize import linprog
 
 import tools
 import balancers
-
+# NOTE: When comparing Scott's and Preston's code reshape and transpose Scott's code as follows:
+#       y_der_scott.reshape((num_groups, num_classes, num_classes)).transpose(0, 2, 1) then print
+#       y_der_preston.reshape((num_classes, num_classes, num_groups))[:, :, i] for different values of
+#       i to compare. They should then be matched up properly if the two code bases are doing the same thing.
 
 # Importing the data
 df = pd.read_csv('data/farm_animals.csv')
@@ -75,4 +78,17 @@ print('TESTING DEMOGRAPHIC PARITY')
 mb = balancers.MulticlassBalancer(y, y_, a)
 mb.adjust_new(loss='0-1', goal='demographic_parity')
 
+
+df = pd.read_csv('data/farm_animals.csv')
+y = df.action.values
+y_ = df.pred_action.values
+a = df.animal
+print('TESTING PYA WEIGHTED O-1 SHOULD BE SAME AS MACRO LOSS')
+print('SCOTT\'s CODE WITH MACRO LOSS')
+mb = balancers.MulticlassBalancer(y, y_, a)
+mb.adjust(loss='macro', goal='odds')
+
+print('PRESTON\'S WEIGHTED PYA 0-1 LOSS')
+mb = balancers.MulticlassBalancer(y, y_, a)
+mb.adjust_new(loss='pya_weighted_01', goal='odds')
 

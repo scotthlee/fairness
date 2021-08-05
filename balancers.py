@@ -679,7 +679,7 @@ class MulticlassBalancer:
         '''
         # Setting up the preliminaries
         tprs = np.array([c[0] for c in constraints])
-        print(tprs)
+#        print(tprs)
         fprs = np.array([c[1] for c in constraints])
         off = np.array([c[2] for c in constraints])
         n_params = tprs.shape[2]
@@ -789,6 +789,8 @@ class MulticlassBalancer:
 
         if loss == '0-1':
             loss_coefs = self.get_0_1_loss_coefs()
+        elif loss == 'pya_weighted_01':
+            loss_coefs = self.get_pya_weighted_01_loss_coefs()
         else:
             raise ValueError('Loss type %s not recognized' %loss)
 
@@ -881,6 +883,9 @@ class MulticlassBalancer:
             # matrix product across first two dimensions
             coefs[:, c, :] = np.einsum('ijk,jk->ik', self.cp_mats_t, p)
         return coefs.flatten()
+
+    def get_pya_weighted_01_loss_coefs(self):
+        return -self.cp_mats_t.flatten()
 
 
     def get_equal_odds_constraints(self):
