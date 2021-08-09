@@ -92,3 +92,7 @@ print('PRESTON\'S WEIGHTED PYA 0-1 LOSS')
 mb = balancers.MulticlassBalancer(y, y_, a)
 mb.adjust_new(loss='pya_weighted_01', goal='odds')
 
+
+mb = balancers.MulticlassBalancer(y, y_, a)
+mb.adjust_new(loss='0-1', goal='positive_predictive_parity')
+

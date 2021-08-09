@@ -807,6 +807,10 @@ class MulticlassBalancer:
             cons_mat = self.get_strict_constraints()
         elif goal == 'demographic_parity':
             cons_mat = self.get_demographic_parity_constraints()
+        elif goal == 'positive_predictive_parity':
+            cons_mat = self.get_pred_parity_constraints(type_='positive')
+        elif goal == 'strict_predictive_parity':
+            cons_mat = self.get_pred_parity_constraints(type_='strict')
         else:
             raise ValueError('Fairness type/goal %s not recognized' %goal)
 
@@ -938,6 +942,36 @@ class MulticlassBalancer:
         cons = self.get_equal_cons_given_mat(J.transpose(1, 0, 2))
         cons = cons[:, 0, :] # all rows will turn out the same
         return cons.reshape((self.n_groups - 1) * self.n_classes, -1)
+
+    def get_pred_parity_constraints(self, type_='strict'):
+        # Constrain numerator of predictive rates to be equal
+        M = self.cp_mats_t *\
+            self.p_vecs.transpose().reshape([self.n_classes, 1, 1, self.n_groups])
+        cons_numer = self.get_equal_cons_given_mat(M.transpose(0, 2, 1, 3))
+        if type_ == 'positive':
+            # take diagonal only
+            cons_numer = np.einsum('ijjklm -> ijklm', cons_numer)
+            cons_numer = cons_numer.reshape((self.n_groups - 1) * self.n_classes, -1)
+        elif type_ == 'strict':
+            cons_numer = cons_numer.reshape((self.n_groups - 1) * self.n_classes**2, -1) 
+        else:
+            raise ValueError('Constraint type %s not recognized in get_pred_parity_constraints' %type_)
+
+
+        # Constrain Demoniminator of predictive rates to be equal
+        p_pred_vecs = self.p_pred_vecs.transpose() # to have shape |C| X |A|
+        E = p_pred_vecs.reshape((self.n_classes, 1, self.n_groups))
+        # repeat so it works with get_equal_cons_given_mat
+        E = np.ones((self.n_classes, self.n_classes, self.n_groups)) * E
+        cons_den = self.get_equal_cons_given_mat(E.transpose(1, 0, 2))
+
+        cons_den = cons_den[:, 0, :] # all rows will turn out the same
+        num_cons_den = (self.n_groups - 1) * self.n_classes
+        cons_den = cons_den.reshape(num_cons_den, -1)
+
+        return np.vstack([cons_numer, cons_den])
+        
+        
         
 
     def get_equal_cons_given_mat(self, M):
@@ -949,8 +983,9 @@ class MulticlassBalancer:
 
         Parameters
         ----------
-        M: Three dimensional np array in the decomposition A = M * P^T. 
-            Must have shape (n_classes, n_classes, n_groups).
+        M: Three or four dimensional np array in the decomposition A = M * P^T. 
+            Must have shape (n_classes, n_classes, n_groups) or shape
+            (n_classes, n_classes, n_classes, n_groups)
 
         Returns
         -------
@@ -978,7 +1013,17 @@ class MulticlassBalancer:
                 # selecting the ith row of M as the
                 # coefficients of the jth column of P^T
                 # for computing A_ij
-                S[i, j, :, j] = M[i, :] 
+                if len(M.shape) == 4:
+                    # Case where there is a different 2 dim
+                    # matrix M for each i and group as in predictive rate
+                    # parity where the numerator is equal to \sum_k P_{ik} Z_{kj} e_i
+                    # which makes the matrix M_{ikj} be Z_{kj} e_i with four
+                    # dimensions total (one for group, i, k, and j)
+                    S[i, j, :, j] = M[i, i, :]
+                else:
+                    # Case where there is only a single 2 dim
+                    # Matrix M for all i
+                    S[i, j, :, j] = M[i, :] 
 
         cons = np.zeros(
                 (self.n_groups - 1, self.n_classes, self.n_classes,
