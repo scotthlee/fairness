@@ -33,6 +33,41 @@ class CLFRates:
         self.acc = (tn + tp) / len(y)
 
 
+def simulate_y(y_levels,
+               a_levels,
+               p_a,
+               p_y_a,
+               n=1000):
+    y_out = []
+    a_out = []
+    for i, a in enumerate(p_y_a):
+        n_a = int(p_a[i] * n)
+        a_out.append([a_levels[i]] * n_a)
+        y_out.append(np.random.choice(a=y_levels,
+                                  p=a,
+                                  size=n_a))
+    out_df = pd.DataFrame((np.concatenate(a_out),
+                           np.concatenate(y_out))).transpose()
+    out_df.columns = ['group', 'y']
+    return out_df
+
+
+def simulate_yh(test_df,
+                p_y_a,
+                outcomes):
+    y_hat = np.empty(test_df.shape[0])
+    groups = test_df.group.unique()
+    for i, a in enumerate(groups):
+        for j, y in enumerate(outcomes):
+            y_ids = np.where((test_df.group == a) &
+                              (test_df.y == y))[0]
+            y_hat[y_ids] = np.random.choice(a=outcomes,
+                                            p=p_y_a[i][j],
+                                            size=len(y_ids))
+    test_df['y_hat'] = y_hat
+    return test_df
+
+
 def make_multi_predictor(y, p, catvar=None):
     out = deepcopy(y)
     
@@ -65,7 +100,6 @@ def make_multi_predictor(y, p, catvar=None):
         out[ids] = cats
     
     return out
-    
     
 
 def make_predictor(y, tpr, fpr, catvar=None):
