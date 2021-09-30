@@ -2,48 +2,13 @@ import numpy as np
 import pandas as pd
 
 from balancers import MulticlassBalancer
+from itertools import permutations, combinations
+from multiprocessing import Pool
+from time import time
+
 import tools
 
-
-def test_run(outcomes,
-             groups,
-             p_group,
-             p_y_group,
-             p_yh_group,
-             loss='micro',
-             goal='odds'):
-    # Simulating the input data
-    y_test = tools.simulate_y(outcomes,
-                              groups,
-                              p_group,
-                              p_y_group)
-    yh_test = tools.simulate_yh(y_test,
-                                p_yh_group,
-                                outcomes)
-    
-    # Setting up the variables
-    y = y_test.y.values
-    a = y_test.group.values
-    yh = y_test.y_hat.values
-    
-    # Running the optimizations
-    b = MulticlassBalancer(y, yh, a)
-    b.adjust(loss=loss, goal=goal)
-    accuracy = b.opt.fun
-    status = b.opt.status
-    roc = b.rocs[0]
-    
-    # Bundling things up
-    out = {
-           'goal': goal,
-           'loss': loss,
-           'status': status,
-           'accuracy': accuracy,
-           'roc': roc
-    }
-    
-    return out
-
+'''
 outcomes = [1, 2, 3]
 groups = ['a', 'b', 'c']
 p_group = [.3, .7]
@@ -60,3 +25,20 @@ test = test_run(outcomes,
                 p_group,
                 p_y_group,
                 p_yh_group)
+'''
+# Trying a loop with multiprocessing
+outcomes = ['yes', 'no', 'maybe']
+groups = ['a', 'b']
+p32 = tools.prob_perms(3, 2)
+p32_11_input = [(outcomes, groups, l[0], l[1], l[2], 'macro') 
+                for l in p32[1][1]]
+
+with Pool() as p:
+    s = time()
+    res = p.starmap(tools.test_run, p32_11_input)
+    f = time()
+    p.close()
+    p.join()
+
+e = f - s
+

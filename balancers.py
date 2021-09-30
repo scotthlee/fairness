@@ -1144,18 +1144,29 @@ class MulticlassBalancer:
                                        A_eq=con,
                                        b_eq=con_bounds,
                                        method='highs')
-        print('SCOTTS VERSION')
-        print(self.opt)
+        #print('SCOTTS VERSION')
+        #print(self.opt)
         
         # Getting the Y~ matrices
-        self.m = tools.pars_to_cpmat(self.opt,
-                                     n_groups=self.n_groups,
-                                     n_classes=self.n_classes)
-        
-        # Calculating group-specific ROC scores from the new parameters
-        self.rocs = tools.parmat_to_roc(self.m,
-                                        self.p_vecs,
-                                        self.cp_mats)
+        if self.opt.status == 0:
+            self.m = tools.pars_to_cpmat(self.opt,
+                                         n_groups=self.n_groups,
+                                         n_classes=self.n_classes)
+            
+            # Calculating group-specific ROC scores from the new parameters
+            self.rocs = tools.parmat_to_roc(self.m,
+                                            self.p_vecs,
+                                            self.cp_mats)
+            
+            # And calculating loss
+            adj_coords = pd.DataFrame(self.rocs[0],
+                                      columns=['fpr', 'tpr']).round(round)
+            adj_loss = 1 - np.sum(self.p_y * adj_coords.tpr.values)
+            self.loss = adj_loss
+        else:
+            self.loss = np.nan
+            self.m = np.nan
+            self.rocs = np.nan
         
         if summary:
             self.summary(org=False)

@@ -13,6 +13,8 @@ from copy import deepcopy
 from multiprocessing import Pool
 from copy import deepcopy
 
+import balancers
+
 
 class CLFRates:
     def __init__(self,
@@ -33,6 +35,80 @@ class CLFRates:
         self.acc = (tn + tp) / len(y)
 
 
+def prob_perms(n_outcomes,
+               n_groups,
+               p_step=.1):
+    # Range of discrete probabilities to choose from
+    p_range = np.arange(p_step, 1 + p_step, p_step)
+    
+    # Permutations of group probabilities
+    p_groups = [np.array(a) for a in combinations(p_range, n_groups)
+                if np.sum(a) == 1]
+    
+    # Permutations of outcome probs for a single group
+    p_y = [a for a in combinations(p_range, n_outcomes)
+           if np.sum(a) == 1]
+    
+    # Perms of perms of outcome probabilities for all groups
+    p_y_groups = [np.array(t) for t in combinations(p_y * n_groups,
+                                          n_groups)]
+    
+    # Perms of conditional probabilities for a single group
+    p_yh = [np.array(t) for t in combinations(p_y * n_outcomes,
+                                    n_outcomes)]
+    
+    # Perms of perms of conditional probabilities for all groups
+    p_yh_groups = [np.array(t) for t in combinations(p_yh * n_groups,
+                                           n_groups)]
+    
+    # Combinations of group probability perms and outcome probability perms
+    perms = [[[[x, y, z] for z in p_yh_groups]
+              for y in p_y_groups] 
+             for x in p_groups]
+    
+    return perms
+
+
+def test_run(outcomes,
+             groups,
+             p_group,
+             p_y_group,
+             p_yh_group,
+             loss='micro',
+             goal='odds'):
+    # Simulating the input data
+    y_test = simulate_y(outcomes,
+                        groups,
+                        p_group,
+                        p_y_group)
+    yh_test = simulate_yh(y_test,
+                          p_yh_group,
+                          outcomes)
+    
+    # Setting up the variables
+    y = y_test.y.values
+    a = y_test.group.values
+    yh = y_test.y_hat.values
+    
+    # Running the optimizations
+    b = balancers.MulticlassBalancer(y, yh, a)
+    b.adjust(loss=loss, goal=goal)
+    accuracy = b.loss
+    status = b.opt.status
+    roc = b.rocs[0]
+    
+    # Bundling things up
+    out = {
+           'goal': goal,
+           'loss': loss,
+           'status': status,
+           'accuracy': accuracy,
+           'roc': roc
+    }
+    
+    return out
+
+
 def simulate_y(y_levels,
                a_levels,
                p_a,
@@ -44,8 +120,8 @@ def simulate_y(y_levels,
         n_a = int(p_a[i] * n)
         a_out.append([a_levels[i]] * n_a)
         y_out.append(np.random.choice(a=y_levels,
-                                  p=a,
-                                  size=n_a))
+                                      p=a,
+                                      size=n_a))
     out_df = pd.DataFrame((np.concatenate(a_out),
                            np.concatenate(y_out))).transpose()
     out_df.columns = ['group', 'y']
@@ -55,17 +131,21 @@ def simulate_y(y_levels,
 def simulate_yh(test_df,
                 p_y_a,
                 outcomes):
-    y_hat = np.empty(test_df.shape[0])
+    pd.options.mode.chained_assignment = None
+    test_df['y_hat'] = 0
     groups = test_df.group.unique()
     for i, a in enumerate(groups):
         for j, y in enumerate(outcomes):
             y_ids = np.where((test_df.group == a) &
                               (test_df.y == y))[0]
-            y_hat[y_ids] = np.random.choice(a=outcomes,
+            test_df.y_hat[y_ids] = np.random.choice(a=outcomes,
                                             p=p_y_a[i][j],
                                             size=len(y_ids))
-    test_df['y_hat'] = y_hat
     return test_df
+
+
+def flatten(l):
+    return [item for sublist in l for item in sublist]
 
 
 def make_multi_predictor(y, p, catvar=None):
