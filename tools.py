@@ -96,7 +96,7 @@ def test_run(outcomes,
     # Running the optimizations
     b = balancers.MulticlassBalancer(y, yh, a)
     b.adjust(loss=loss, goal=goal)
-    accuracy = b.loss
+    accuracy = 1 - b.loss
     status = b.opt.status
     if status == 0:
         roc = b.rocs[0]

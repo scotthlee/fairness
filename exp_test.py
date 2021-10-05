@@ -3,7 +3,7 @@ import pandas as pd
 
 from balancers import MulticlassBalancer
 from itertools import permutations, combinations
-from importlib iport reload
+from importlib import reload
 from multiprocessing import Pool
 from time import time
 
@@ -70,7 +70,7 @@ input_23 = tools.flatten([l for l in tools.flatten(input_23)])
 # Running the sim
 with Pool() as p:
     input = [[[(outcomes, 
-                groups, 
+                groups2, 
                 t[0], 
                 t[1], 
                 t[2], 
