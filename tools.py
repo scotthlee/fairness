@@ -75,7 +75,10 @@ def test_run(outcomes,
              p_y_group,
              p_yh_group,
              loss='micro',
-             goal='odds'):
+             goal='odds',
+             g_bal=None,
+             c_bal=None,
+             pred_b=None):
     # Simulating the input data
     y_test = simulate_y(outcomes,
                         groups,
@@ -95,16 +98,22 @@ def test_run(outcomes,
     b.adjust(loss=loss, goal=goal)
     accuracy = b.loss
     status = b.opt.status
-    roc = b.rocs[0]
+    if status == 0:
+        roc = b.rocs[0]
+    else:
+        roc = np.nan
     
     # Bundling things up
-    out = {
-           'goal': goal,
-           'loss': loss,
-           'status': status,
-           'accuracy': accuracy,
-           'roc': roc
-    }
+    out_df = pd.DataFrame([goal, loss, status, accuracy]).transpose()
+    out_df.columns = ['goal', 'loss', 'status', 'accuracy']
+    if g_bal:
+        out_df['group_balance'] = g_bal
+    if c_bal:
+        out_df['class_balance'] = c_bal
+    if pred_b:
+        out_df['pred_bias'] = pred_b
+    
+    out = {'stats': out_df, 'roc': roc}
     
     return out
 

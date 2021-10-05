@@ -3,34 +3,31 @@ import pandas as pd
 
 from balancers import MulticlassBalancer
 from itertools import permutations, combinations
+from importlib iport reload
 from multiprocessing import Pool
 from time import time
 
 import tools
 
-'''
-outcomes = [1, 2, 3]
-groups = ['a', 'b', 'c']
-p_group = [.3, .7]
-p_y_group = [[.1, .1, .8],
-             [.3, .5, .2]]
-p_yh_group = np.array([[[.1, .2, .7], 
-                   [.6, .3, .1], 
-                   [.1, .1, .8]],
-                  [[.8, .1, .1], 
-                   [.2, .5, .3], 
-                   [.2, .2, .6]]])
-test = test_run(outcomes,
-                groups,
-                p_group,
-                p_y_group,
-                p_yh_group)
-'''
+
 # Trying a loop with multiprocessing
 outcomes = ['yes', 'no', 'maybe']
-groups = ['a', 'b']
+groups2 = ['a', 'b']
+groups3 = ['a', 'b', 'c']
+losses = ['micro', 'macro']
+goals = ['odds', 'opportunity', 'strict']
 
-# Options for p_group
+# Setting up the combinations of situations
+pred_types = ['low', 'medium', 'high']
+out_types = ['balance', 'equal_imbalance', 'unequal_imbalance']
+group_types = ['no_minority', 'slight_minority', 'strong_minority']
+
+sits = [[[[g, o, p] for p in pred_types]
+             for o in out_types]
+            for g in group_types]
+sits = tools.flatten([l for l in tools.flatten(sits)])
+
+# Trying a run for a 3-class 2-group problem
 p23 = {'groups': {
            'slight_minority': np.array([.3, .7]),
            'no_minority': np.array([.5, .5]),
@@ -38,24 +35,24 @@ p23 = {'groups': {
        'outcomes': {
            'balance': np.array([[.333, .333, .334],
                                 [.333, .333, .334]]),
-           'equal_imblanace': np.array([[.1, .5, .4],
+           'equal_imbalance': np.array([[.1, .5, .4],
                                         [.1, .5, .4]]),
-           'unequal_imblanace': np.array([[.1, .5, .4],
+           'unequal_imbalance': np.array([[.1, .5, .4],
                                           [.4, .5, .1]])},
        'preds': {
-           'great_good': [np.array([[.9, .05, .05],
+           'low': [np.array([[.9, .05, .05],
                                    [.05, .9, .05],
                                    [.05, .05, .9]]),
                           np.array([[.7, .15, .15],
                                     [.15, .7, .15],
                                     [.15, .15, .7]])],
-           'great_ok': [np.array([[.9, .05, .05],
+           'medium': [np.array([[.9, .05, .05],
                                    [.05, .9, .05],
                                    [.05, .05, .9]]),
                         np.array([[.5, .25, .25],
                                   [.25, .5, .25],
                                   [.25, .25, .5]])],
-           'great_bad': [np.array([[.9, .05, .05],
+           'high': [np.array([[.9, .05, .05],
                                    [.05, .9, .05],
                                    [.05, .05, .9]]),
                          np.array([[.3, .3, .4],
@@ -64,32 +61,36 @@ p23 = {'groups': {
            }
        }
 
-# Setting up the combinations of 2 groups and 3 outcomes
-c23 = [[[(p23['groups'][g], p23['outcomes'][o], p23['preds'][p]) 
-        for p in p23['preds'].keys()] 
-       for o in p23['outcomes'].keys()] 
-      for g in p23['groups'].keys()]
-c23 = tools.flatten([l for l in tools.flatten(c)])
+input_23 = [[[(p23['groups'][g], p23['outcomes'][o], p23['preds'][p]) 
+        for p in pred_types] 
+       for o in out_types] 
+      for g in group_types]
+input_23 = tools.flatten([l for l in tools.flatten(input_23)])
 
 # Running the sim
-res23 = [tools.test_run(outcomes, groups, p[0], p[1], p[2]) for p in c]
+with Pool() as p:
+    input = [[[(outcomes, 
+                groups, 
+                t[0], 
+                t[1], 
+                t[2], 
+                loss, 
+                goal,
+                sits[i][0],
+                sits[i][1],
+                sits[i][2])
+            for i, t in enumerate(input_23)]
+           for loss in losses]
+          for goal in goals]
+    input = tools.flatten([l for l in tools.flatten(input)])
+    res = p.starmap(tools.test_run, input)
+    p.close()
+    p.join()
 
-p32 = {'groups': {
-           'no_minority': [.333, .333, .334],
-           'one_slight_minority': [.2, .4, .4],
-           'two_slight_minorities': [.2, .6, .2],
-           'two_strong_minorities': [.1, .8, .1],
-           'one_strong_minority': [.1, .5, .4]
-            },
-       'outcomes': {
-           'balance': [[.333, .333, .334],
-                       [.333, .333, .334]],
-           'equal_imblanace': [[.1, .5, .4],
-                               [.1, .5, .4]],
-           'unequal_imblanace': [[.1, .5, .4],
-                                 [.4, .5, .1]]}
-        }
+stats_23 = pd.concat([r['stats'] for r in res], axis=0)
+stats_23.to_csv('2-group 3-class stats.csv', index=False)
 
+# Setting up a 3-group 3-group problem
 p33 = {'outcomes': {
             'balance': [[.333, .333, .334],
                         [.333, .333, .334],
