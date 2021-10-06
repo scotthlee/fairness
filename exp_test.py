@@ -18,34 +18,35 @@ losses = ['micro', 'macro']
 goals = ['odds', 'opportunity', 'strict']
 
 # Setting up the combinations of situations
-pred_types = ['low', 'medium', 'high']
-out_types = ['balance', 'equal_imbalance', 'unequal_imbalance']
+bias_types = ['low', 'medium', 'high']
+out_types = ['balanced', 'one_rare', 'two_rare']
 group_types = ['no_minority', 'slight_minority', 'strong_minority']
 
-sits = [[[[g, o, p] for p in pred_types]
+sits = [[[[g, o, p] for p in bias_types]
              for o in out_types]
             for g in group_types]
 sits = tools.flatten([l for l in tools.flatten(sits)])
 
 # Trying a run for a 3-class 2-group problem
 p23 = {'groups': {
-           'slight_minority': np.array([.3, .7]),
-           'no_minority': np.array([.5, .5]),
-           'strong_minority': np.array([.2, .8])},
+        'no_minority': np.array([.5, .5]),
+        'slight_minority': np.array([.7, .3]),
+        'strong_minority': np.array([.9, .1])},
        'outcomes': {
-           'balance': np.array([[.333, .333, .334],
+           'balanced': np.array([[.333, .333, .334],
                                 [.333, .333, .334]]),
-           'equal_imbalance': np.array([[.1, .5, .4],
-                                        [.1, .5, .4]]),
-           'unequal_imbalance': np.array([[.1, .5, .4],
-                                          [.4, .5, .1]])},
-       'preds': {
+           'one_rare': np.array([[.1, .5, .4],
+                                 [.1, .5, .4]]),
+           'two_rare': np.array([[.1, .8, .1],
+                                 [.1, .8, .1]]),
+           },
+       'bias': {
            'low': [np.array([[.9, .05, .05],
-                                   [.05, .9, .05],
-                                   [.05, .05, .9]]),
-                          np.array([[.7, .15, .15],
-                                    [.15, .7, .15],
-                                    [.15, .15, .7]])],
+                             [.05, .9, .05],
+                             [.05, .05, .9]]),
+                   np.array([[.7, .15, .15],
+                             [.15, .7, .15],
+                             [.15, .15, .7]])],
            'medium': [np.array([[.9, .05, .05],
                                    [.05, .9, .05],
                                    [.05, .05, .9]]),
@@ -61,8 +62,8 @@ p23 = {'groups': {
            }
        }
 
-input_23 = [[[(p23['groups'][g], p23['outcomes'][o], p23['preds'][p]) 
-        for p in pred_types] 
+input_23 = [[[(p23['groups'][g], p23['outcomes'][o], p23['bias'][b]) 
+        for b in bias_types] 
        for o in out_types] 
       for g in group_types]
 input_23 = tools.flatten([l for l in tools.flatten(input_23)])

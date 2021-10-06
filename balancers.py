@@ -745,7 +745,7 @@ class MulticlassBalancer:
 
     def adjust_new(self,
                goal='odds',
-               loss='0-1',
+               loss='micro',
                round=4,
                return_optima=False,
                summary=False,
@@ -787,9 +787,9 @@ class MulticlassBalancer:
         #       self.cp_mat contains the probabilities of y^ given y
         # the above should be added to the attributes doc string
 
-        if loss == '0-1':
+        if loss == 'micro':
             loss_coefs = self.get_0_1_loss_coefs()
-        elif loss == 'pya_weighted_01':
+        elif loss == 'macro':
             loss_coefs = self.get_pya_weighted_01_loss_coefs()
         else:
             raise ValueError('Loss type %s not recognized' %loss)
@@ -841,30 +841,29 @@ class MulticlassBalancer:
                                        A_eq=cons_mat,
                                        b_eq=cons_bounds,
                                        method='highs')
-  
-        print(self.opt)
-        y_derived = self.opt.x.reshape([self.n_classes, self.n_classes, self.n_groups])
-        self.m = y_derived
-        print('checking diagonal of W with cp_mats_t')
-        print([self.cp_mats_t[:, i, 0] @ self.m[:, i, 0] for i in range(self.n_classes)])
-        print([self.cp_mats_t[:, i, 1] @ self.m[:, i, 1] for i in range(self.n_classes)])
-#        print([self.cp_mats_t[:, i, 2] @ self.m[:, i, 2] for i in range(self.n_classes)])
-
-        print('checking diagonal of W with cp_mats')
-        print(self.cp_mats[0, 0, :] @ self.m[:, 0, 0])
-        print(self.cp_mats[1, 0, :] @ self.m[:, 0, 1])
-
-        print('--------------Learned derived predictions-------------')
-        print(self.m[:, :, 0])
-        print(self.m[:, :, 1])
- #       print(self.m[:, :, 2])
-        print('checking the W matrix')
-        W = np.einsum('ijk, jlk->ilk', self.cp_mats_t.transpose((1, 0, 2)), self.m)
-        print(W[:, :, 0])
-        print(W[:, :, 1])
-  #      print(W[:, :, 2])
-        self.rocs = tools.parmat_to_roc(y_derived, self.p_vecs, self.cp_mats)
-
+        
+        # Getting the Y~ matrices
+        if self.opt.status == 0:
+            self.m = tools.pars_to_cpmat(self.opt,
+                                         n_groups=self.n_groups,
+                                         n_classes=self.n_classes)
+            
+            # Calculating group-specific ROC scores from the new parameters
+            self.rocs = tools.parmat_to_roc(self.m,
+                                            self.p_vecs,
+                                            self.cp_mats)
+            
+            # And calculating loss
+            adj_coords = pd.DataFrame(self.rocs[0],
+                                      columns=['fpr', 'tpr']).round(round)
+            adj_loss = 1 - np.sum(self.p_y * adj_coords.tpr.values)
+            self.loss = adj_loss
+            
+        else:
+            self.loss = np.nan
+            self.m = np.nan
+            self.rocs = np.nan
+        
         self.con = cons_mat
         self.con_bounds = cons_bounds
 

@@ -95,17 +95,24 @@ def test_run(outcomes,
     
     # Running the optimizations
     b = balancers.MulticlassBalancer(y, yh, a)
-    b.adjust(loss=loss, goal=goal)
+    b.adjust_new(loss=loss, goal=goal)
     accuracy = 1 - b.loss
     status = b.opt.status
     if status == 0:
         roc = b.rocs[0]
+        if np.any(np.sum(roc, axis=1) == 0):
+            trivial = 1
+        else:
+            trivial = 0
     else:
+        trivial = np.nan
         roc = np.nan
     
     # Bundling things up
-    out_df = pd.DataFrame([goal, loss, status, accuracy]).transpose()
-    out_df.columns = ['goal', 'loss', 'status', 'accuracy']
+    out_df = pd.DataFrame([goal, loss, status, 
+                           trivial, accuracy]).transpose()
+    out_df.columns = ['goal', 'loss', 'status', 
+                      'trivial', 'accuracy']
     if g_bal:
         out_df['group_balance'] = g_bal
     if c_bal:
