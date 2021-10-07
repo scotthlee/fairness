@@ -89,13 +89,13 @@ def test_run(outcomes,
                           outcomes)
     
     # Setting up the variables
-    y = y_test.y.values
-    a = y_test.group.values
-    yh = y_test.y_hat.values
+    y = yh_test.y.values
+    a = yh_test.group.values
+    yh = yh_test.y_hat.values
     
     # Running the optimizations
     b = balancers.MulticlassBalancer(y, yh, a)
-    b.adjust_new(loss=loss, goal=goal)
+    b.adjust(loss=loss, goal=goal)
     accuracy = 1 - b.loss
     status = b.opt.status
     if status == 0:
@@ -129,12 +129,19 @@ def simulate_y(y_levels,
                a_levels,
                p_a,
                p_y_a,
-               n=1000):
+               n=1000,
+               seed=2021):
+    # Setting the seeds
+    np.random.seed(seed)
+    seeds = np.random.randint(1, 1e6, len(p_a))
+    
+    # Filling in the data
     y_out = []
     a_out = []
     for i, a in enumerate(p_y_a):
         n_a = int(p_a[i] * n)
         a_out.append([a_levels[i]] * n_a)
+        np.random.seed(seeds[i])
         y_out.append(np.random.choice(a=y_levels,
                                       p=a,
                                       size=n_a))
@@ -146,17 +153,21 @@ def simulate_y(y_levels,
 
 def simulate_yh(test_df,
                 p_y_a,
-                outcomes):
+                outcomes,
+                seed=2021):
     pd.options.mode.chained_assignment = None
     test_df['y_hat'] = 0
     groups = test_df.group.unique()
+    np.random.seed(seed)
+    seeds = np.random.randint(0, 1e6, len(groups))
     for i, a in enumerate(groups):
         for j, y in enumerate(outcomes):
             y_ids = np.where((test_df.group == a) &
                               (test_df.y == y))[0]
+            np.random.seed(seeds[i])
             test_df.y_hat[y_ids] = np.random.choice(a=outcomes,
-                                            p=p_y_a[i][j],
-                                            size=len(y_ids))
+                                                    p=p_y_a[i][j],
+                                                    size=len(y_ids))
     return test_df
 
 
