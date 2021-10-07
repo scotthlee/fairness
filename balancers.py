@@ -841,7 +841,31 @@ class MulticlassBalancer:
                                        A_eq=cons_mat,
                                        b_eq=cons_bounds,
                                        method='highs')
-        
+  
+        if self.opt.status == 0:
+            y_derived = self.opt.x.reshape([self.n_classes, 
+                                            self.n_classes, 
+                                            self.n_groups])
+            self.m = y_derived
+            W = np.einsum('ijk, jlk->ilk', 
+                          self.cp_mats_t.transpose((1, 0, 2)), 
+                          self.m)
+            
+            self.rocs = tools.parmat_to_roc(y_derived, 
+                                            self.p_vecs, 
+                                            self.cp_mats)
+
+            self.con = cons_mat
+            self.con_bounds = cons_bounds
+        else:
+            self.rocs = np.nan
+
+        if summary:
+            self.summary(org=False)
+            
+        if return_optima:
+            return {'loss': self.theoretical_loss, 'roc': self.roc}
+
         # Getting the Y~ matrices
         if self.opt.status == 0:
             self.m = tools.pars_to_cpmat(self.opt,
