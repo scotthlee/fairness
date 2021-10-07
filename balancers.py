@@ -847,18 +847,12 @@ class MulticlassBalancer:
                                             self.n_classes, 
                                             self.n_groups])
             self.m = y_derived
-            W = np.einsum('ijk, jlk->ilk', 
-                          self.cp_mats_t.transpose((1, 0, 2)), 
-                          self.m)
+            W = np.einsum('ijk, jlk->ilk', self.cp_mats_t.transpose((1, 0, 2)), self.m)
             
-            self.rocs = tools.parmat_to_roc(y_derived, 
-                                            self.p_vecs, 
-                                            self.cp_mats)
+            self.rocs = tools.parmat_to_roc(y_derived, self.p_vecs, self.cp_mats)
 
             self.con = cons_mat
             self.con_bounds = cons_bounds
-        else:
-            self.rocs = np.nan
 
         if summary:
             self.summary(org=False)
