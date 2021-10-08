@@ -607,7 +607,7 @@ class MulticlassBalancer:
         self.rocs = None
         self.roc = None
         self.con = None
-        self.goal = None
+        self.goal = ''
         
         # Getting the group info
         self.groups = np.unique(a)
@@ -641,7 +641,7 @@ class MulticlassBalancer:
             pass
             self.summary(adj=False)
     
-    def __get_constraints(self, p_vec, cp_mat):
+    def __get_constraints(self, p_vec, p_a, cp_mat):
         '''Calculates TPR and FPR weights for the constraint matrix'''
         # Shortening the vars to keep things clean
         p = p_vec
@@ -652,7 +652,6 @@ class MulticlassBalancer:
         n_params = n_classes**2
         tpr = np.zeros(shape=(n_classes, n_params))
         fpr = np.zeros(shape=(n_classes, n_params))
-        off = np.zeros(shape=(n_classes, n_classes - 1, n_params))
         
         # Filling in the weights
         for i in range(n_classes):
@@ -664,14 +663,17 @@ class MulticlassBalancer:
             end = start + n_classes
             fpr[i, start:end] = np.dot(p_i, M_i) / p_i.sum()
             tpr[i, start:end] = M[i]
-            
-            for j in range(n_classes - 1):
-                off[i, j, start:end] = M_i[j]
         
         # Reshaping the off-diagonal constraints
-        off = np.concatenate(off, 0)
+        strict = np.zeros(shape=(n_params, n_params))
+        A = np.array(p.T / p_a).T
+        B = np.array(M.T * A).T
+        for i in range(n_classes):
+            start = i * n_classes
+            end = start + n_classes
+            strict[start:end, start:end] = B
         
-        return tpr, fpr, off
+        return tpr, fpr, strict
     
     def __pair_constraints(self, constraints):
         '''Takes the output of constraint_weights() and returns a matrix 
@@ -681,7 +683,7 @@ class MulticlassBalancer:
         tprs = np.array([c[0] for c in constraints])
 #        print(tprs)
         fprs = np.array([c[1] for c in constraints])
-        off = np.array([c[2] for c in constraints])
+        strict = np.array([c[2] for c in constraints])
         n_params = tprs.shape[2]
         n_classes = tprs.shape[1]
         n_groups = self.n_groups
@@ -701,10 +703,10 @@ class MulticlassBalancer:
                                    n_groups,
                                    n_classes,
                                    n_params))
-        off_cons = np.zeros(shape=(n_pairs,
-                                   n_groups,
-                                   n_classes * (n_classes - 1),
-                                   n_params))
+        strict_cons = np.zeros(shape=(n_pairs,
+                                      n_groups,
+                                      n_params,
+                                      n_params))
         
         # Filling in the constraint comparisons
         for i, c in enumerate(group_combos):
@@ -720,8 +722,8 @@ class MulticlassBalancer:
             tpr_cons[i, c[1]] = tpr_flip * -1 * tprs[c[1]]
             fpr_cons[i, c[0]] = fpr_flip * fprs[c[0]]
             fpr_cons[i, c[1]] = fpr_flip * -1 * fprs[c[1]]
-            off_cons[i, c[0]] = off[c[0]]
-            off_cons[i, c[1]] = off[c[1]]
+            strict_cons[i, c[0]] = strict[c[0]]
+            strict_cons[i, c[1]] = -1 * strict[c[1]]
         
         # Filling in the norm constraints
         one_cons = np.zeros(shape=(n_groups * n_classes,
@@ -739,13 +741,13 @@ class MulticlassBalancer:
         # Reshaping the arrays
         tpr_cons = np.concatenate([np.hstack(m) for m in tpr_cons])
         fpr_cons = np.concatenate([np.hstack(m) for m in fpr_cons])
-        off_cons = np.concatenate([np.hstack(m) for m in off_cons])
+        strict_cons = np.concatenate([np.hstack(m) for m in strict_cons])
         
-        return tpr_cons, fpr_cons, off_cons, one_cons
+        return tpr_cons, fpr_cons, strict_cons, one_cons
 
     def adjust_new(self,
                goal='odds',
-               loss='micro',
+               loss='0-1',
                round=4,
                return_optima=False,
                summary=False,
@@ -787,9 +789,9 @@ class MulticlassBalancer:
         #       self.cp_mat contains the probabilities of y^ given y
         # the above should be added to the attributes doc string
 
-        if loss == 'micro':
+        if loss == '0-1':
             loss_coefs = self.get_0_1_loss_coefs()
-        elif loss == 'macro':
+        elif loss == 'pya_weighted_01':
             loss_coefs = self.get_pya_weighted_01_loss_coefs()
         else:
             raise ValueError('Loss type %s not recognized' %loss)
@@ -842,46 +844,29 @@ class MulticlassBalancer:
                                        b_eq=cons_bounds,
                                        method='highs')
   
-        if self.opt.status == 0:
-            y_derived = self.opt.x.reshape([self.n_classes, 
-                                            self.n_classes, 
-                                            self.n_groups])
-            self.m = y_derived
-            W = np.einsum('ijk, jlk->ilk', self.cp_mats_t.transpose((1, 0, 2)), self.m)
-            
-            self.rocs = tools.parmat_to_roc(y_derived, self.p_vecs, self.cp_mats)
+        print(self.opt)
+        y_derived = self.opt.x.reshape([self.n_classes, self.n_classes, self.n_groups])
+        self.m = y_derived
+        print('checking diagonal of W with cp_mats_t')
+        print([self.cp_mats_t[:, i, 0] @ self.m[:, i, 0] for i in range(self.n_classes)])
+        print([self.cp_mats_t[:, i, 1] @ self.m[:, i, 1] for i in range(self.n_classes)])
+#        print([self.cp_mats_t[:, i, 2] @ self.m[:, i, 2] for i in range(self.n_classes)])
 
-            self.con = cons_mat
-            self.con_bounds = cons_bounds
+        print('checking diagonal of W with cp_mats')
+        print(self.cp_mats[0, 0, :] @ self.m[:, 0, 0])
+        print(self.cp_mats[1, 0, :] @ self.m[:, 0, 1])
 
-        if summary:
-            self.summary(org=False)
-            
-        if return_optima:
-            return {'loss': self.theoretical_loss, 'roc': self.roc}
+        print('--------------Learned derived predictions-------------')
+        print(self.m[:, :, 0])
+        print(self.m[:, :, 1])
+ #       print(self.m[:, :, 2])
+        print('checking the W matrix')
+        W = np.einsum('ijk, jlk->ilk', self.cp_mats_t.transpose((1, 0, 2)), self.m)
+        print(W[:, :, 0])
+        print(W[:, :, 1])
+  #      print(W[:, :, 2])
+        self.rocs = tools.parmat_to_roc(y_derived, self.p_vecs, self.cp_mats)
 
-        # Getting the Y~ matrices
-        if self.opt.status == 0:
-            self.m = tools.pars_to_cpmat(self.opt,
-                                         n_groups=self.n_groups,
-                                         n_classes=self.n_classes)
-            
-            # Calculating group-specific ROC scores from the new parameters
-            self.rocs = tools.parmat_to_roc(self.m,
-                                            self.p_vecs,
-                                            self.cp_mats)
-            
-            # And calculating loss
-            adj_coords = pd.DataFrame(self.rocs[0],
-                                      columns=['fpr', 'tpr']).round(round)
-            adj_loss = 1 - np.sum(self.p_y * adj_coords.tpr.values)
-            self.loss = adj_loss
-            
-        else:
-            self.loss = np.nan
-            self.m = np.nan
-            self.rocs = np.nan
-        
         self.con = cons_mat
         self.con_bounds = cons_bounds
 
@@ -1050,9 +1035,7 @@ class MulticlassBalancer:
             cons[g, :, :, :, :, g] = S[:, :, :, :, g]
             cons[g, :, :, :, :, g + 1] = -S[:, :, :, :, g + 1]
         return cons    
-        
     
-        
     
     def adjust(self,
                goal='odds',
@@ -1093,9 +1076,14 @@ class MulticlassBalancer:
         """
         # Getting the costraint weights
         constraints = [self.__get_constraints(self.p_vecs[i],
+                                              self.p_a[i],
                                               self.cp_mats[i])
                                for i in range(self.n_groups)]
         self.constraints = constraints
+        # Arranging the constraint weights by group comparisons
+        tpr_cons, fpr_cons, strict_cons, norm_cons = self.__pair_constraints(
+            self.constraints
+            )
         
         # First option is macro loss, or the sum of the unweighted
         # conditional probabilities from above
@@ -1128,11 +1116,6 @@ class MulticlassBalancer:
             self.w = w
             self.obj = w.sum(2).flatten()
         
-        # Arranging the constraint weights by group comparisons
-        tpr_cons, fpr_cons, off_cons, norm_cons = self.__pair_constraints(
-            constraints
-            )
-        
         # Normazliation bounds; used in all scenarios
         norm_bounds = np.repeat(1, norm_cons.shape[0])
         
@@ -1148,10 +1131,11 @@ class MulticlassBalancer:
             con_bounds = np.concatenate([tpr_bounds, norm_bounds])
         
         elif 'strict' in goal:
-            con = np.concatenate([off_cons, norm_cons])
-            off_bounds = np.repeat(0, off_cons.shape[0])
-            con_bounds = np.concatenate([off_bounds, norm_bounds])
+            con = np.concatenate([strict_cons, norm_cons])
+            strict_bounds = np.repeat(0, strict_cons.shape[0])
+            con_bounds = np.concatenate([strict_bounds, norm_bounds])
         
+        self.goal = goal
         self.con = con
         self.con_bounds = con_bounds
         
@@ -1161,29 +1145,16 @@ class MulticlassBalancer:
                                        A_eq=con,
                                        b_eq=con_bounds,
                                        method='highs')
-        #print('SCOTTS VERSION')
-        #print(self.opt)
         
         # Getting the Y~ matrices
-        if self.opt.status == 0:
-            self.m = tools.pars_to_cpmat(self.opt,
-                                         n_groups=self.n_groups,
-                                         n_classes=self.n_classes)
-            
-            # Calculating group-specific ROC scores from the new parameters
-            self.rocs = tools.parmat_to_roc(self.m,
-                                            self.p_vecs,
-                                            self.cp_mats)
-            
-            # And calculating loss
-            adj_coords = pd.DataFrame(self.rocs[0],
-                                      columns=['fpr', 'tpr']).round(round)
-            adj_loss = 1 - np.sum(self.p_y * adj_coords.tpr.values)
-            self.loss = adj_loss
-        else:
-            self.loss = np.nan
-            self.m = np.nan
-            self.rocs = np.nan
+        self.m = tools.pars_to_cpmat(self.opt,
+                                     n_groups=self.n_groups,
+                                     n_classes=self.n_classes)
+        
+        # Calculating group-specific ROC scores from the new parameters
+        self.rocs = tools.parmat_to_roc(self.m,
+                                        self.p_vecs,
+                                        self.cp_mats)
         
         if summary:
             self.summary(org=False)
@@ -1431,10 +1402,20 @@ class MulticlassBalancer:
         
         if adj:
             # Casting the post-adjustment ROC scores as a DF
-            adj_coords = pd.DataFrame(self.rocs[0],
-                                      columns=['fpr', 'tpr']).round(round)
+            if 'opportunity' in self.goal:
+                print('\nPost-adjustment group rates are \n')
+                for i, r in enumerate(self.rocs):
+                    print(self.groups[i])
+                    adj_coords = pd.DataFrame(r, columns=['fpr', 'tpr'])
+                    adj_coords = adj_coords.round(round)
+                    print(adj_coords.to_string(index=False))
+                    print('\n')
+            else:
+                adj_coords = pd.DataFrame(self.rocs[0],
+                                          columns=['fpr', 'tpr']).round(round)
+                print('\nPost-adjustment rates for all groups are \n')
+                print(adj_coords.to_string(index=False))
+            
             adj_loss = 1 - np.sum(self.p_y * adj_coords.tpr.values)
-            print('\nPost-adjustment rates for all groups are \n')
-            print(adj_coords.to_string(index=False))
             print('\nAnd loss is %.4f\n' %adj_loss)
 

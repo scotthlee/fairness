@@ -1,12 +1,12 @@
 import numpy as np
 import pandas as pd
 
-from balancers import MulticlassBalancer
 from itertools import permutations, combinations
 from importlib import reload
 from multiprocessing import Pool
 from time import time
 
+import balancers
 import tools
 
 
