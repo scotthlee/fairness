@@ -1083,5 +1083,3 @@ def cpmat_to_roc(p_vec, cp_mat):
     out.columns = ['fpr', 'tpr']
     return out
     
-    
-    

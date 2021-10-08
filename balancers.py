@@ -666,8 +666,9 @@ class MulticlassBalancer:
         
         # Reshaping the off-diagonal constraints
         strict = np.zeros(shape=(n_params, n_params))
-        A = np.array(p.T / p_a).T
-        B = np.array(M.T * A).T
+        #A = np.array(p.T / p_a).T
+        #B = np.array(M.T * A).T
+        B = M
         for i in range(n_classes):
             start = i * n_classes
             end = start + n_classes
@@ -681,7 +682,6 @@ class MulticlassBalancer:
         '''
         # Setting up the preliminaries
         tprs = np.array([c[0] for c in constraints])
-#        print(tprs)
         fprs = np.array([c[1] for c in constraints])
         strict = np.array([c[2] for c in constraints])
         n_params = tprs.shape[2]
@@ -1041,7 +1041,6 @@ class MulticlassBalancer:
                goal='odds',
                loss='macro',
                round=4,
-               return_optima=False,
                summary=False,
                binom=False):
         """Adjusts predictions to satisfy a fairness constraint.
@@ -1057,9 +1056,6 @@ class MulticlassBalancer:
         
         round : int, default 4
             Decimal places for rounding results.
-        
-        return_optima: bool, default True
-            Whether to reutn optimal loss and ROC coordinates.
         
         summary : bool, default True
             Whether to print post-adjustment false-positive and true-positive \
@@ -1158,14 +1154,12 @@ class MulticlassBalancer:
                                             self.cp_mats)
             self.loss = 1 - np.sum(self.p_y * self.rocs[0, :, 1])
         else:
+            print('\nBalancing failed: Linear program is infeasible.\n')
             self.rocs = np.nan
             self.loss = np.nan
             
         if summary:
             self.summary(org=False)
-        
-        if return_optima:                
-            return {'loss': self.theoretical_loss, 'roc': self.roc}
     
     def predict(self, y_, a, binom=False):
         """Generates bias-adjusted predictions on new data.
