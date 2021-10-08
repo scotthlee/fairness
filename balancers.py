@@ -607,7 +607,7 @@ class MulticlassBalancer:
         self.rocs = None
         self.roc = None
         self.con = None
-        self.goal = None
+        self.goal = ''
         
         # Getting the group info
         self.groups = np.unique(a)
@@ -641,7 +641,7 @@ class MulticlassBalancer:
             pass
             self.summary(adj=False)
     
-    def __get_constraints(self, p_vec, cp_mat):
+    def __get_constraints(self, p_vec, p_a, cp_mat):
         '''Calculates TPR and FPR weights for the constraint matrix'''
         # Shortening the vars to keep things clean
         p = p_vec
@@ -652,7 +652,6 @@ class MulticlassBalancer:
         n_params = n_classes**2
         tpr = np.zeros(shape=(n_classes, n_params))
         fpr = np.zeros(shape=(n_classes, n_params))
-        off = np.zeros(shape=(n_classes, n_classes - 1, n_params))
         
         # Filling in the weights
         for i in range(n_classes):
@@ -664,14 +663,18 @@ class MulticlassBalancer:
             end = start + n_classes
             fpr[i, start:end] = np.dot(p_i, M_i) / p_i.sum()
             tpr[i, start:end] = M[i]
-            
-            for j in range(n_classes - 1):
-                off[i, j, start:end] = M_i[j]
         
         # Reshaping the off-diagonal constraints
-        off = np.concatenate(off, 0)
+        strict = np.zeros(shape=(n_params, n_params))
+        #A = np.array(p.T / p_a).T
+        #B = np.array(M.T * A).T
+        B = M
+        for i in range(n_classes):
+            start = i * n_classes
+            end = start + n_classes
+            strict[start:end, start:end] = B
         
-        return tpr, fpr, off
+        return tpr, fpr, strict
     
     def __pair_constraints(self, constraints):
         '''Takes the output of constraint_weights() and returns a matrix 
@@ -679,9 +682,8 @@ class MulticlassBalancer:
         '''
         # Setting up the preliminaries
         tprs = np.array([c[0] for c in constraints])
-#        print(tprs)
         fprs = np.array([c[1] for c in constraints])
-        off = np.array([c[2] for c in constraints])
+        strict = np.array([c[2] for c in constraints])
         n_params = tprs.shape[2]
         n_classes = tprs.shape[1]
         n_groups = self.n_groups
@@ -701,10 +703,10 @@ class MulticlassBalancer:
                                    n_groups,
                                    n_classes,
                                    n_params))
-        off_cons = np.zeros(shape=(n_pairs,
-                                   n_groups,
-                                   n_classes * (n_classes - 1),
-                                   n_params))
+        strict_cons = np.zeros(shape=(n_pairs,
+                                      n_groups,
+                                      n_params,
+                                      n_params))
         
         # Filling in the constraint comparisons
         for i, c in enumerate(group_combos):
@@ -720,8 +722,8 @@ class MulticlassBalancer:
             tpr_cons[i, c[1]] = tpr_flip * -1 * tprs[c[1]]
             fpr_cons[i, c[0]] = fpr_flip * fprs[c[0]]
             fpr_cons[i, c[1]] = fpr_flip * -1 * fprs[c[1]]
-            off_cons[i, c[0]] = off[c[0]]
-            off_cons[i, c[1]] = off[c[1]]
+            strict_cons[i, c[0]] = strict[c[0]]
+            strict_cons[i, c[1]] = -1 * strict[c[1]]
         
         # Filling in the norm constraints
         one_cons = np.zeros(shape=(n_groups * n_classes,
@@ -739,9 +741,9 @@ class MulticlassBalancer:
         # Reshaping the arrays
         tpr_cons = np.concatenate([np.hstack(m) for m in tpr_cons])
         fpr_cons = np.concatenate([np.hstack(m) for m in fpr_cons])
-        off_cons = np.concatenate([np.hstack(m) for m in off_cons])
+        strict_cons = np.concatenate([np.hstack(m) for m in strict_cons])
         
-        return tpr_cons, fpr_cons, off_cons, one_cons
+        return tpr_cons, fpr_cons, strict_cons, one_cons
 
     def adjust_new(self,
                goal='odds',
