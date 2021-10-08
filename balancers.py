@@ -1041,7 +1041,6 @@ class MulticlassBalancer:
                goal='odds',
                loss='macro',
                round=4,
-               return_optima=False,
                summary=False,
                binom=False):
         """Adjusts predictions to satisfy a fairness constraint.
@@ -1058,9 +1057,6 @@ class MulticlassBalancer:
         round : int, default 4
             Decimal places for rounding results.
         
-        return_optima: bool, default True
-            Whether to reutn optimal loss and ROC coordinates.
-        
         summary : bool, default True
             Whether to print post-adjustment false-positive and true-positive \
             rates for each group.
@@ -1076,9 +1072,14 @@ class MulticlassBalancer:
         """
         # Getting the costraint weights
         constraints = [self.__get_constraints(self.p_vecs[i],
+                                              self.p_a[i],
                                               self.cp_mats[i])
                                for i in range(self.n_groups)]
         self.constraints = constraints
+        # Arranging the constraint weights by group comparisons
+        tpr_cons, fpr_cons, strict_cons, norm_cons = self.__pair_constraints(
+            self.constraints
+            )
         
         # First option is macro loss, or the sum of the unweighted
         # conditional probabilities from above
@@ -1111,11 +1112,6 @@ class MulticlassBalancer:
             self.w = w
             self.obj = w.sum(2).flatten()
         
-        # Arranging the constraint weights by group comparisons
-        tpr_cons, fpr_cons, off_cons, norm_cons = self.__pair_constraints(
-            constraints
-            )
-        
         # Normazliation bounds; used in all scenarios
         norm_bounds = np.repeat(1, norm_cons.shape[0])
         
@@ -1131,10 +1127,11 @@ class MulticlassBalancer:
             con_bounds = np.concatenate([tpr_bounds, norm_bounds])
         
         elif 'strict' in goal:
-            con = np.concatenate([off_cons, norm_cons])
-            off_bounds = np.repeat(0, off_cons.shape[0])
-            con_bounds = np.concatenate([off_bounds, norm_bounds])
+            con = np.concatenate([strict_cons, norm_cons])
+            strict_bounds = np.repeat(0, strict_cons.shape[0])
+            con_bounds = np.concatenate([strict_bounds, norm_bounds])
         
+        self.goal = goal
         self.con = con
         self.con_bounds = con_bounds
         
@@ -1144,24 +1141,25 @@ class MulticlassBalancer:
                                        A_eq=con,
                                        b_eq=con_bounds,
                                        method='highs')
-        print('SCOTTS VERSION')
-        print(self.opt)
         
-        # Getting the Y~ matrices
-        self.m = tools.pars_to_cpmat(self.opt,
-                                     n_groups=self.n_groups,
-                                     n_classes=self.n_classes)
-        
-        # Calculating group-specific ROC scores from the new parameters
-        self.rocs = tools.parmat_to_roc(self.m,
-                                        self.p_vecs,
-                                        self.cp_mats)
-        
+        if self.opt.status == 0:
+            # Getting the Y~ matrices
+            self.m = tools.pars_to_cpmat(self.opt,
+                                         n_groups=self.n_groups,
+                                         n_classes=self.n_classes)
+            
+            # Calculating group-specific ROC scores from the new parameters
+            self.rocs = tools.parmat_to_roc(self.m,
+                                            self.p_vecs,
+                                            self.cp_mats)
+            self.loss = 1 - np.sum(self.p_y * self.rocs[0, :, 1])
+        else:
+            print('\nBalancing failed: Linear program is infeasible.\n')
+            self.rocs = np.nan
+            self.loss = np.nan
+            
         if summary:
             self.summary(org=False)
-        
-        if return_optima:                
-            return {'loss': self.theoretical_loss, 'roc': self.roc}
     
     def predict(self, y_, a, binom=False):
         """Generates bias-adjusted predictions on new data.
@@ -1403,10 +1401,21 @@ class MulticlassBalancer:
         
         if adj:
             # Casting the post-adjustment ROC scores as a DF
-            adj_coords = pd.DataFrame(self.rocs[0],
-                                      columns=['fpr', 'tpr']).round(round)
+            if 'opportunity' in self.goal:
+                print('\nPost-adjustment group rates are \n')
+                for i, r in enumerate(self.rocs):
+                    print(self.groups[i])
+                    adj_coords = pd.DataFrame(r, columns=['fpr', 'tpr'])
+                    adj_coords = adj_coords.round(round)
+                    print(adj_coords.to_string(index=False))
+                    print('\n')
+            else:
+                adj_coords = pd.DataFrame(self.rocs[0],
+                                          columns=['fpr', 'tpr']).round(round)
+                print('\nPost-adjustment rates for all groups are \n')
+                print(adj_coords.to_string(index=False))
+            
             adj_loss = 1 - np.sum(self.p_y * adj_coords.tpr.values)
-            print('\nPost-adjustment rates for all groups are \n')
-            print(adj_coords.to_string(index=False))
             print('\nAnd loss is %.4f\n' %adj_loss)
+
 
