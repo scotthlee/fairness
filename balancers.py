@@ -1146,16 +1146,21 @@ class MulticlassBalancer:
                                        b_eq=con_bounds,
                                        method='highs')
         
-        # Getting the Y~ matrices
-        self.m = tools.pars_to_cpmat(self.opt,
-                                     n_groups=self.n_groups,
-                                     n_classes=self.n_classes)
-        
-        # Calculating group-specific ROC scores from the new parameters
-        self.rocs = tools.parmat_to_roc(self.m,
-                                        self.p_vecs,
-                                        self.cp_mats)
-        
+        if self.opt.status == 0:
+            # Getting the Y~ matrices
+            self.m = tools.pars_to_cpmat(self.opt,
+                                         n_groups=self.n_groups,
+                                         n_classes=self.n_classes)
+            
+            # Calculating group-specific ROC scores from the new parameters
+            self.rocs = tools.parmat_to_roc(self.m,
+                                            self.p_vecs,
+                                            self.cp_mats)
+            self.loss = 1 - np.sum(self.p_y * self.rocs[0, :, 1])
+        else:
+            self.rocs = np.nan
+            self.loss = np.nan
+            
         if summary:
             self.summary(org=False)
         
