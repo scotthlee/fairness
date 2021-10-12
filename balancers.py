@@ -749,6 +749,7 @@ class MulticlassBalancer:
                round=4,
                return_optima=False,
                summary=False,
+               slack=0,
                binom=False):
         """Adjusts predictions to satisfy a fairness constraint.
         
@@ -826,21 +827,40 @@ class MulticlassBalancer:
             g = con_idx // int(self.n_classes)
             cons_norm[con_idx, c, :, g] = np.ones(self.n_classes)
         cons_norm = cons_norm.reshape(cons_norm.shape[0], -1)
-        cons_mat = np.concatenate([cons_mat, cons_norm], axis=0)            
+#        cons_mat = np.concatenate([cons_mat, cons_norm], axis=0)            
         #print(cons_mat)
             
 
         # Form the bounds of the constraints:
         #    For odds/opp/strict these are 0 since they are equalities.
         #    For the normalization constraints these are 1
-        cons_bounds = np.zeros(cons_mat.shape[0])
-        cons_bounds[-cons_norm.shape[0]:] = 1
+#        cons_bounds = np.zeros(cons_mat.shape[0])
+#        cons_bounds = np.ones(cons_mat.shape[0]) * slack
+#        cons_bounds[-cons_norm.shape[0]:] = 1 # moved to inside slack if/else statement
 
-        self.opt = sp.optimize.linprog(c=loss_coefs,
+        if slack == 0:
+            # all constraints are equality constraints only
+            cons_mat = np.concatenate([cons_mat, cons_norm], axis=0)            
+            cons_bounds = np.ones(cons_mat.shape[0]) * slack
+            cons_bounds[-cons_norm.shape[0]:] = 1
+            self.opt = sp.optimize.linprog(c=loss_coefs,
                                        bounds=[0, 1],
                                        A_eq=cons_mat,
                                        b_eq=cons_bounds,
                                        method='highs')
+        else:
+            # constraints for normalization are still equality, but
+            # constraints for equality across groups are inequality
+            cons_norm_bounds = #TODO
+            cons_ineq_bounds = np.ones(cons_mat.shape[0]) * slack
+            self.opt = sp.optimize.linprog(c=loss_coefs,
+                                       bounds=[0, 1],
+                                       A_eq=cons_norm,
+                                       b_eq=cons_norm_bounds,
+                                       A_ub=cons_mat,
+                                       b_ub=cons_ineq_bounds
+                                       method='highs')
+        
   
         print(self.opt)
         y_derived = self.opt.x.reshape([self.n_classes, self.n_classes, self.n_groups])
