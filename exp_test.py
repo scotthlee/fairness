@@ -1,4 +1,5 @@
 import numpy as np
+import pickle
 import pandas as pd
 
 from itertools import permutations, combinations
@@ -88,6 +89,7 @@ with Pool() as p:
     p.close()
     p.join()
 
+rocs_23 = [[r['old_rocs'], r['new_rocs']] for r in res]
 stats_23 = pd.concat([r['stats'] for r in res], axis=0)
 stats_23['n_groups'] = 2
 
@@ -204,6 +206,7 @@ with Pool() as p:
     p.close()
     p.join()
 
+rocs_33 = [[r['old_rocs'], r['new_rocs']] for r in res]
 stats_33 = pd.concat([r['stats'] for r in res], axis=0)
 stats_33['n_groups'] = 3
 

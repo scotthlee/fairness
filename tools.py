@@ -96,23 +96,28 @@ def test_run(outcomes,
     # Running the optimizations
     b = balancers.MulticlassBalancer(y, yh, a)
     b.adjust(loss=loss, goal=goal)
-    accuracy = 1 - b.loss
+    new_acc = 1 - b.loss
+    old_acc = np.dot(b.p_y, np.diag(b.cp_mat))
     status = b.opt.status
     if status == 0:
-        roc = b.rocs[0]
-        if np.any(np.sum(roc, axis=1) == 0):
+        new_roc = b.rocs[0]
+        old_roc = np.array([cpmat_to_roc(b.p_vecs[i],
+                                        b.cp_mats[i])
+                           for i in range(len(b.cp_mats))])
+        if np.any(np.sum(new_roc, axis=1) == 0):
             trivial = 1
         else:
             trivial = 0
     else:
         trivial = np.nan
-        roc = np.nan
+        new_roc = np.nan
+        old_roc = np.nan
     
     # Bundling things up
     out_df = pd.DataFrame([goal, loss, status, 
-                           trivial, accuracy]).transpose()
+                           trivial, old_acc, new_acc]).transpose()
     out_df.columns = ['goal', 'loss', 'status', 
-                      'trivial', 'accuracy']
+                      'trivial', 'old_acc', 'new_acc']
     if g_bal:
         out_df['group_balance'] = g_bal
     if c_bal:
@@ -120,7 +125,9 @@ def test_run(outcomes,
     if pred_b:
         out_df['pred_bias'] = pred_b
     
-    out = {'stats': out_df, 'roc': roc}
+    out = {'stats': out_df, 
+           'old_rocs': old_roc, 
+           'new_rocs': new_roc}
     
     return out
 
