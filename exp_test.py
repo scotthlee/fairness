@@ -89,7 +89,7 @@ with Pool() as p:
     p.join()
 
 stats_23 = pd.concat([r['stats'] for r in res], axis=0)
-stats_23.to_csv('2-group 3-class stats.csv', index=False)
+stats_23['n_groups'] = 2
 
 # Setting up a 3-group 3-group problem
 bias_types = ['low_one', 'medium_one', 'high_one',
@@ -205,5 +205,8 @@ with Pool() as p:
     p.join()
 
 stats_33 = pd.concat([r['stats'] for r in res], axis=0)
-stats_33.to_csv('3-group 3-class stats.csv', index=False)
+stats_33['n_groups'] = 3
 
+# Putting the 2 together and saving to disk
+stats = pd.concat([stats_23, stats_33], axis=0)
+stats.to_csv('~/Desktop/exp_stats.csv', index=False)
