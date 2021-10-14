@@ -610,11 +610,10 @@ class MulticlassBalancer:
         self.goal = ''
         
         # Getting the group info
-        self.groups = np.unique(a)
-        group_ids = [np.where(a == g)[0] for g in self.groups]
         self.p_y = tools.p_vec(y)
         self.p_a = tools.p_vec(a)
         self.n_classes = self.p_y.shape[0]
+        self.outcomes = np.unique(y)
         
         # Getting some basic info for each group
         self.groups = np.unique(a)
@@ -636,9 +635,12 @@ class MulticlassBalancer:
             self.cp_mats_t[:, :, a] = self.cp_mats[a].transpose()
 
         self.cp_mat = tools.cp_mat(y, y_)
+        old_rocs = [tools.cpmat_to_roc(self.p_vecs[i],
+                                       self.cp_mats[i])
+                    for i in range(self.n_groups)]
+        self.old_rocs = dict(zip(self.groups, old_rocs))
         
         if summary:
-            pass
             self.summary(adj=False)
     
     def __get_constraints(self, p_vec, p_a, cp_mat):
@@ -1073,11 +1075,11 @@ class MulticlassBalancer:
             The optimal loss and ROC coordinates after adjustment.    
         """
         # Getting the costraint weights
-        constraints = [self.__get_constraints(self.p_vecs[i],
-                                              self.p_a[i],
-                                              self.cp_mats[i])
-                               for i in range(self.n_groups)]
-        self.constraints = constraints
+        self.constraints = [self.__get_constraints(self.p_vecs[i],
+                                                   self.p_a[i],
+                                                   self.cp_mats[i])
+                            for i in range(self.n_groups)]
+        
         # Arranging the constraint weights by group comparisons
         tpr_cons, fpr_cons, strict_cons, norm_cons = self.__pair_constraints(
             self.constraints
@@ -1198,11 +1200,11 @@ class MulticlassBalancer:
              s1=50,
              s2=50,
              preds=False,
-             optimum=True,
-             roc_curves=True,
+             optimum=False,
+             roc_curves=False,
              lp_lines='all', 
-             shade_hull=True,
-             chance_line=True,
+             shade_hull=False,
+             chance_line=False,
              palette='colorblind',
              style='white',
              xlim=(0, 1),
@@ -1249,22 +1251,33 @@ class MulticlassBalancer:
         A plot showing shapes were specified by the arguments.
         """
         # Setting basic plot parameters
-        plt.xlim(xlim)
-        plt.ylim(ylim)
         sns.set_theme()
         sns.set_style(style)
         cmap = sns.color_palette(palette, as_cmap=True)
         
-        # Plotting the unadjusted ROC coordinates
-        orig_coords = tools.group_roc_coords(self.__y, 
-                                             self.__y_, 
-                                             self.__a)
-        sns.scatterplot(x=orig_coords.fpr,
-                        y=orig_coords.tpr,
-                        hue=self.groups,
-                        s=s1,
-                        palette='colorblind')
-        plt.legend(loc='lower right')
+        # Organizing the ROC points by group (rbg) and by outcome (rbo)
+        rbg = [r for r in self.old_rocs.values()]
+        rbo = [np.concatenate([r.loc[i].values.reshape(1, -1) 
+                               for r in rbg], 0)
+               for i in range(self.n_classes)]
+        
+        # Making a tall df so we can use sns.relplot()
+        tall = deepcopy(rbg)
+        for i, df in enumerate(tall):
+            df['group'] = self.groups[i]
+            df['outcome'] = self.outcomes
+        tall = pd.concat(tall, axis=0)
+        
+        # Setting up the plots
+        rp = sns.relplot(x='fpr', 
+                         y='tpr', 
+                         hue='group', 
+                         col='outcome', 
+                         data=tall,
+                         kind='scatter',
+                         palette=palette)
+        rp.fig.set_tight_layout(True)
+        rp.set(xlim=(0, 1), ylim=(0, 1))
         
         # Plotting the adjusted coordinates
         if preds:
@@ -1280,104 +1293,104 @@ class MulticlassBalancer:
                             s=s2,
                             alpha=1)
         
-        # Optionally adding the ROC curves
-        if self.rocs is not None and roc_curves:
-            [plt.plot(r[0], r[1]) for r in self.rocs]
-        
-        # Optionally adding the chance line
-        if chance_line:
-            plt.plot((0, 1), (0, 1),
-                     color='lightgray')
-        
         # Adding lines to show the LP geometry
         if lp_lines:
-            # Getting the groupwise coordinates
-            group_rates = self.group_rates.values()
-            group_var = np.array([[g]*3 for g in self.groups]).flatten()
-            
             # Getting coordinates for the upper portions of the hulls
-            upper_x = np.array([[0, g.fpr, 1] for g in group_rates]).flatten()
-            upper_y = np.array([[0, g.tpr, 1] for g in group_rates]).flatten()
-            upper_df = pd.DataFrame((upper_x, upper_y, group_var)).T
-            upper_df.columns = ['x', 'y', 'group']
-            upper_df = upper_df.astype({'x': 'float',
-                                        'y': 'float',
-                                        'group': 'str'})
-            # Plotting the line
-            sns.lineplot(x='x', 
-                         y='y', 
-                         hue='group', 
-                         data=upper_df,
-                         alpha=0.75, 
-                         legend=False)
-            
-            # Optionally adding lower lines to complete the hulls
-            if lp_lines == 'all':
-                lower_x = np.array([[0, 1 - g.fpr, 1] 
-                                    for g in group_rates]).flatten()
-                lower_y = np.array([[0, 1 - g.tpr, 1] 
-                                    for g in group_rates]).flatten()
-                lower_df = pd.DataFrame((lower_x, lower_y, group_var)).T
-                lower_df.columns = ['x', 'y', 'group']
-                lower_df = lower_df.astype({'x': 'float',
+            for i, ax in enumerate(rp.axes[0]):
+                g_r = pd.DataFrame(rbo[i], columns=['fpr', 'tpr'])
+                group_var = np.array([[g]*3 for g in self.groups]).flatten()
+                upper_x = np.array([[0, fpr, 1] 
+                                    for fpr in g_r.fpr.values]).flatten()
+                upper_y = np.array([[0, tpr, 1] 
+                                    for tpr in g_r.tpr.values]).flatten()
+                upper_df = pd.DataFrame((upper_x, upper_y, group_var)).T
+                upper_df.columns = ['x', 'y', 'group']
+                upper_df = upper_df.astype({'x': 'float',
                                             'y': 'float',
                                             'group': 'str'})
+                
                 # Plotting the line
                 sns.lineplot(x='x', 
                              y='y', 
                              hue='group', 
-                             data=lower_df,
+                             data=upper_df,
+                             ax=ax,
                              alpha=0.75, 
                              legend=False)
                 
-            # Shading the area under the lines
-            if shade_hull:
-                for i, group in enumerate(self.groups):
-                    uc = upper_df[upper_df.group == group]
-                    u_null = np.array([0, uc.x.values[1], 1])
-                                        
-                    if lp_lines == 'upper':
-                        plt.fill_between(x=uc.x,
-                                         y1=uc.y,
-                                         y2=u_null,
-                                         color=cmap[i],
-                                         alpha=0.2) 
-                    if lp_lines == 'all':
-                        lc = lower_df[lower_df.group == group]
-                        l_null = np.array([0, lc.x.values[1], 1])
-                        plt.fill_between(x=uc.x,
-                                         y1=uc.y,
-                                         y2=u_null,
-                                         color=cmap[i],
-                                         alpha=0.2) 
-                        plt.fill_between(x=lc.x,
-                                         y1=l_null,
-                                         y2=lc.y,
-                                         color=cmap[i],
-                                         alpha=0.2)        
-        
+                # Optionally adding lower lines to complete the hulls
+                if lp_lines == 'all':
+                    lower_x = np.array([[0, 1 - fpr, 1] 
+                                        for fpr in g_r.fpr.values]).flatten()
+                    lower_y = np.array([[0, 1 - tpr, 1] 
+                                        for tpr in g_r.tpr.values]).flatten()
+                    lower_df = pd.DataFrame((lower_x, lower_y, group_var)).T
+                    lower_df.columns = ['x', 'y', 'group']
+                    lower_df = lower_df.astype({'x': 'float',
+                                                'y': 'float',
+                                                'group': 'str'})
+                    # Plotting the line
+                    sns.lineplot(x='x', 
+                                 y='y', 
+                                 hue='group', 
+                                 data=lower_df,
+                                 ax=ax,
+                                 alpha=0.75, 
+                                 legend=False)
+                
+                if shade_hull:
+                    for i, group in enumerate(self.groups):
+                        uc = upper_df[upper_df.group == group]
+                        u_null = np.array([0, uc.x.values[1], 1])
+                                            
+                        if lp_lines == 'upper':
+                            ax.fill_between(x=uc.x,
+                                            y1=uc.y,
+                                            y2=u_null,
+                                            color=cmap[i],
+                                            alpha=0.1) 
+                        if lp_lines == 'all':
+                            lc = lower_df[lower_df.group == group]
+                            l_null = np.array([0, lc.x.values[1], 1])
+                            ax.fill_between(x=uc.x,
+                                            y1=uc.y,
+                                            y2=u_null,
+                                            color=cmap[i],
+                                            alpha=0.1) 
+                            ax.fill_between(x=lc.x,
+                                             y1=l_null,
+                                             y2=lc.y,
+                                             color=cmap[i],
+                                             alpha=0.1)
+                
         # Optionally adding the post-adjustment optimum
         if optimum:
-            if self.roc is None:
+            if self.rocs is None:
                 print('.adjust() must be called before optimum can be shown.')
                 pass
             
-            elif 'odds' in self.goal:
-                plt.scatter(self.roc[0],
-                                self.roc[1],
-                                marker='x',
-                                color='black')
-            
-            elif 'opportunity' in self.goal:
-                plt.hlines(self.roc[1],
-                           xmin=0,
-                           xmax=1,
-                           color='black',
-                           linestyles='--',
-                           linewidths=0.5)
-            
-            elif 'parity' in self.goal:
-                pass
+            for i, ax in enumerate(rp.axes[0]):
+                if ('odds' in self.goal) | ('strict' in self.goal):
+                    ax.scatter(self.rocs[0, i, 0],
+                               self.rocs[0, i, 1],
+                               marker='x',
+                               color='black')
+                
+                elif 'opportunity' in self.goal:
+                    ax.hlines(self.rocs[0, i, 1],
+                              xmin=0,
+                              xmax=1,
+                              color='black',
+                              linestyles='--',
+                              linewidths=0.5)
+                
+                elif 'parity' in self.goal:
+                    pass
+        
+        # Optionally adding the chance line
+        if chance_line:
+            [ax.plot((0, 1), (0, 1), color='lightgray') 
+             for ax in rp.axes[0]]
         
         plt.show()
     
