@@ -240,6 +240,8 @@ def clf_metrics(true,
                 cutpoint=0.5,
                 mod_name=None,
                 round=4,
+                pred_type='numeric',
+                preds_are_probs=False,
                 round_pval=False,
                 mcnemar=False,
                 argmax_axis=1):
@@ -251,22 +253,21 @@ def clf_metrics(true,
         true = true.values
     
     # Figuring out if the guesses are classes or probabilities
-    if np.any([0 < p < 1 for p in pred.flatten()]):
-        preds_are_probs = True
-    else:
-        preds_are_probs = False
+    if pred_type == 'numeric':
+        if np.any([0 < p < 1 for p in pred.flatten()]):
+            preds_are_probs = True
     
     # Optional exit for doing averages with multiclass/label inputs
     if len(np.unique(true)) > 2:
         # Getting binary metrics for each set of results
         codes = np.unique(true)
         
-        # Softmaxing the probabilities if it hasn't already been done
-        if np.sum(pred[0]) > 1:
-            pred = np.array([np.exp(p) / np.sum(np.exp(p)) for p in pred])
-        
         # Argmaxing for when we have probabilities
         if preds_are_probs:
+            # Softmaxing the probabilities if it hasn't already been done
+            if np.sum(pred[0]) > 1:
+                pred = np.array([np.exp(p) / np.sum(np.exp(p)) for p in pred])
+            
             auc = roc_auc_score(true,
                                 pred,
                                 average=average,
@@ -860,6 +861,14 @@ def grid_metrics(targets,
             scores.append(stats)
     
     return pd.concat(scores, axis=0)
+
+
+def onehot_matrix(y, sparse=False):
+    if not sparse:
+        y_mat = np.zeros((y.shape[0], len(np.unique(y))))
+        for row, col in enumerate(y):
+            y_mat[row, col] = 1
+    return y_mat
 
 
 # Converts a boot_cis['cis'] object to a single row
