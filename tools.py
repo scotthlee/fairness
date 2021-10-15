@@ -1090,3 +1090,20 @@ def cpmat_to_roc(p_vec, cp_mat):
     out.columns = ['fpr', 'tpr']
     return out
     
+<<<<<<< HEAD
+=======
+    
+def sparsify(col, reshape=True, return_df=True, long_names=False):
+    '''Makes a sparse array of a data frame of categorical variables'''
+    levels = np.unique(col)
+    out = np.array([col == level for level in levels],
+                   dtype=np.uint8).transpose()
+    if long_names:
+        var = col.name + '.'
+        levels = [var + level for level in levels]
+    columns = [col.lower() for col in levels]
+    if return_df:
+        out = pd.DataFrame(out, columns=columns)
+    return out
+    
+>>>>>>> 4af976c... adding sparsify() for running sklearn models with COMPAS data
