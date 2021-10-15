@@ -13,8 +13,6 @@ from copy import deepcopy
 from multiprocessing import Pool
 from copy import deepcopy
 
-import balancers
-
 
 class CLFRates:
     def __init__(self,
@@ -33,153 +31,6 @@ class CLFRates:
         self.fnr = np.round(fn / (fn + tp), round)
         self.fpr = np.round(fp / (fp + tn), round)
         self.acc = (tn + tp) / len(y)
-
-
-def prob_perms(n_outcomes,
-               n_groups,
-               p_step=.1):
-    # Range of discrete probabilities to choose from
-    p_range = np.arange(p_step, 1 + p_step, p_step)
-    
-    # Permutations of group probabilities
-    p_groups = [np.array(a) for a in combinations(p_range, n_groups)
-                if np.sum(a) == 1]
-    
-    # Permutations of outcome probs for a single group
-    p_y = [a for a in combinations(p_range, n_outcomes)
-           if np.sum(a) == 1]
-    
-    # Perms of perms of outcome probabilities for all groups
-    p_y_groups = [np.array(t) for t in combinations(p_y * n_groups,
-                                          n_groups)]
-    
-    # Perms of conditional probabilities for a single group
-    p_yh = [np.array(t) for t in combinations(p_y * n_outcomes,
-                                    n_outcomes)]
-    
-    # Perms of perms of conditional probabilities for all groups
-    p_yh_groups = [np.array(t) for t in combinations(p_yh * n_groups,
-                                           n_groups)]
-    
-    # Combinations of group probability perms and outcome probability perms
-    perms = [[[[x, y, z] for z in p_yh_groups]
-              for y in p_y_groups] 
-             for x in p_groups]
-    
-    return perms
-
-
-def test_run(outcomes,
-             groups,
-             p_group,
-             p_y_group,
-             p_yh_group,
-             loss='micro',
-             goal='odds',
-             g_bal=None,
-             c_bal=None,
-             pred_b=None):
-    # Simulating the input data
-    y_test = simulate_y(outcomes,
-                        groups,
-                        p_group,
-                        p_y_group)
-    yh_test = simulate_yh(y_test,
-                          p_yh_group,
-                          outcomes)
-    
-    # Setting up the variables
-    y = yh_test.y.values
-    a = yh_test.group.values
-    yh = yh_test.y_hat.values
-    
-    # Running the optimizations
-    b = balancers.MulticlassBalancer(y, yh, a)
-    b.adjust(loss=loss, goal=goal)
-    new_acc = 1 - b.loss
-    old_acc = np.dot(b.p_y, np.diag(b.cp_mat))
-    status = b.opt.status
-    if status == 0:
-        new_roc = b.rocs[0]
-        old_roc = np.array([cpmat_to_roc(b.p_vecs[i],
-                                        b.cp_mats[i])
-                           for i in range(len(b.cp_mats))])
-        if np.any(np.sum(new_roc, axis=1) == 0):
-            trivial = 1
-        else:
-            trivial = 0
-    else:
-        trivial = np.nan
-        new_roc = np.nan
-        old_roc = np.nan
-    
-    # Bundling things up
-    out_df = pd.DataFrame([goal, loss, status, 
-                           trivial, old_acc, new_acc]).transpose()
-    out_df.columns = ['goal', 'loss', 'status', 
-                      'trivial', 'old_acc', 'new_acc']
-    if g_bal:
-        out_df['group_balance'] = g_bal
-    if c_bal:
-        out_df['class_balance'] = c_bal
-    if pred_b:
-        out_df['pred_bias'] = pred_b
-    
-    out = {'stats': out_df, 
-           'old_rocs': old_roc, 
-           'new_rocs': new_roc}
-    
-    return out
-
-
-def simulate_y(y_levels,
-               a_levels,
-               p_a,
-               p_y_a,
-               n=1000,
-               seed=2021):
-    # Setting the seeds
-    np.random.seed(seed)
-    seeds = np.random.randint(1, 1e6, len(p_a))
-    
-    # Filling in the data
-    y_out = []
-    a_out = []
-    for i, a in enumerate(p_y_a):
-        n_a = int(p_a[i] * n)
-        a_out.append([a_levels[i]] * n_a)
-        np.random.seed(seeds[i])
-        y_out.append(np.random.choice(a=y_levels,
-                                      p=a,
-                                      size=n_a))
-    out_df = pd.DataFrame((np.concatenate(a_out),
-                           np.concatenate(y_out))).transpose()
-    out_df.columns = ['group', 'y']
-    return out_df
-
-
-def simulate_yh(test_df,
-                p_y_a,
-                outcomes,
-                seed=2021):
-    pd.options.mode.chained_assignment = None
-    test_df['y_hat'] = 0
-    groups = test_df.group.unique()
-    np.random.seed(seed)
-    seeds = np.random.randint(0, 1e6, len(groups))
-    for i, a in enumerate(groups):
-        for j, y in enumerate(outcomes):
-            y_ids = np.where((test_df.group == a) &
-                              (test_df.y == y))[0]
-            np.random.seed(seeds[i])
-            test_df.y_hat[y_ids] = np.random.choice(a=outcomes,
-                                                    p=p_y_a[i][j],
-                                                    size=len(y_ids))
-    return test_df
-
-
-def flatten(l):
-    return [item for sublist in l for item in sublist]
 
 
 def make_multi_predictor(y, p, catvar=None):
@@ -214,6 +65,7 @@ def make_multi_predictor(y, p, catvar=None):
         out[ids] = cats
     
     return out
+    
     
 
 def make_predictor(y, tpr, fpr, catvar=None):
@@ -1090,8 +942,6 @@ def cpmat_to_roc(p_vec, cp_mat):
     out.columns = ['fpr', 'tpr']
     return out
     
-<<<<<<< HEAD
-=======
     
 def sparsify(col, reshape=True, return_df=True, long_names=False):
     '''Makes a sparse array of a data frame of categorical variables'''
@@ -1106,4 +956,3 @@ def sparsify(col, reshape=True, return_df=True, long_names=False):
         out = pd.DataFrame(out, columns=columns)
     return out
     
->>>>>>> 4af976c... adding sparsify() for running sklearn models with COMPAS data
