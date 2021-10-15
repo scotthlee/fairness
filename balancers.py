@@ -1198,12 +1198,12 @@ class MulticlassBalancer:
              s1=50,
              s2=50,
              preds=False,
-             optimum=False,
-             roc_curves=False,
+             optimum=True,
              lp_lines='all', 
-             shade_hull=False,
-             chance_line=False,
+             shade_hull=True,
+             chance_line=True,
              palette='colorblind',
+             tight=False,
              style='white',
              xlim=(0, 1),
              ylim=(0, 1),
@@ -1222,9 +1222,6 @@ class MulticlassBalancer:
         
         optimum : bool, default True
             Whether to plot the theoretical optima for the predictions.
-        
-        roc_curves : bool, default True
-            Whether to plot ROC curves for the unadjusted scores, when avail.
         
         lp_lines : {'upper', 'all'}, default 'all'
             Whether to plot the convex hulls solved by the linear program.
@@ -1274,8 +1271,8 @@ class MulticlassBalancer:
                          data=tall,
                          kind='scatter',
                          palette=palette)
-        rp.fig.set_tight_layout(True)
-        rp.set(xlim=(0, 1), ylim=(0, 1))
+        rp.fig.set_tight_layout(tight)
+        rp.set(xlim=xlim, ylim=ylim)
         
         # Plotting the adjusted coordinates
         if preds:
@@ -1408,8 +1405,9 @@ class MulticlassBalancer:
             for i in range(self.n_groups):
                 group_stats = tools.cpmat_to_roc(self.p_vecs[i],
                                                  self.cp_mats[i]).round(round)
+                group_stats.index = self.outcomes
                 print(self.groups[i])
-                print(group_stats.to_string(index=False) + '\n')
+                print(group_stats.to_string() + '\n')
             print('\nAnd loss is %.4f\n' %org_loss)
         
         if adj:
@@ -1420,13 +1418,15 @@ class MulticlassBalancer:
                     print(self.groups[i])
                     adj_coords = pd.DataFrame(r, columns=['fpr', 'tpr'])
                     adj_coords = adj_coords.round(round)
-                    print(adj_coords.to_string(index=False))
+                    adj_coords.index = self.outcomes
+                    print(adj_coords.to_string())
                     print('\n')
             else:
                 adj_coords = pd.DataFrame(self.rocs[0],
                                           columns=['fpr', 'tpr']).round(round)
+                adj_coords.index = self.outcomes
                 print('\nPost-adjustment rates for all groups are \n')
-                print(adj_coords.to_string(index=False))
+                print(adj_coords.to_string())
             
             adj_loss = 1 - np.sum(self.p_y * adj_coords.tpr.values)
             print('\nAnd loss is %.4f\n' %adj_loss)
