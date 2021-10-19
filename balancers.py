@@ -607,14 +607,13 @@ class MulticlassBalancer:
         self.rocs = None
         self.roc = None
         self.con = None
-        self.goal = None
+        self.goal = ''
         
         # Getting the group info
-        self.groups = np.unique(a)
-        group_ids = [np.where(a == g)[0] for g in self.groups]
         self.p_y = tools.p_vec(y)
         self.p_a = tools.p_vec(a)
         self.n_classes = self.p_y.shape[0]
+        self.outcomes = np.unique(y)
         
         # Getting some basic info for each group
         self.groups = np.unique(a)
@@ -636,12 +635,15 @@ class MulticlassBalancer:
             self.cp_mats_t[:, :, a] = self.cp_mats[a].transpose()
 
         self.cp_mat = tools.cp_mat(y, y_)
+        old_rocs = [tools.cpmat_to_roc(self.p_vecs[i],
+                                       self.cp_mats[i])
+                    for i in range(self.n_groups)]
+        self.old_rocs = dict(zip(self.groups, old_rocs))
         
         if summary:
-            pass
             self.summary(adj=False)
     
-    def __get_constraints(self, p_vec, cp_mat):
+    def __get_constraints(self, p_vec, p_a, cp_mat):
         '''Calculates TPR and FPR weights for the constraint matrix'''
         # Shortening the vars to keep things clean
         p = p_vec
@@ -652,7 +654,6 @@ class MulticlassBalancer:
         n_params = n_classes**2
         tpr = np.zeros(shape=(n_classes, n_params))
         fpr = np.zeros(shape=(n_classes, n_params))
-        off = np.zeros(shape=(n_classes, n_classes - 1, n_params))
         
         # Filling in the weights
         for i in range(n_classes):
@@ -664,14 +665,18 @@ class MulticlassBalancer:
             end = start + n_classes
             fpr[i, start:end] = np.dot(p_i, M_i) / p_i.sum()
             tpr[i, start:end] = M[i]
-            
-            for j in range(n_classes - 1):
-                off[i, j, start:end] = M_i[j]
         
         # Reshaping the off-diagonal constraints
-        off = np.concatenate(off, 0)
+        strict = np.zeros(shape=(n_params, n_params))
+        #A = np.array(p.T / p_a).T
+        #B = np.array(M.T * A).T
+        B = M
+        for i in range(n_classes):
+            start = i * n_classes
+            end = start + n_classes
+            strict[start:end, start:end] = B
         
-        return tpr, fpr, off
+        return tpr, fpr, strict
     
     def __pair_constraints(self, constraints):
         '''Takes the output of constraint_weights() and returns a matrix 
@@ -679,9 +684,8 @@ class MulticlassBalancer:
         '''
         # Setting up the preliminaries
         tprs = np.array([c[0] for c in constraints])
-#        print(tprs)
         fprs = np.array([c[1] for c in constraints])
-        off = np.array([c[2] for c in constraints])
+        strict = np.array([c[2] for c in constraints])
         n_params = tprs.shape[2]
         n_classes = tprs.shape[1]
         n_groups = self.n_groups
@@ -701,10 +705,10 @@ class MulticlassBalancer:
                                    n_groups,
                                    n_classes,
                                    n_params))
-        off_cons = np.zeros(shape=(n_pairs,
-                                   n_groups,
-                                   n_classes * (n_classes - 1),
-                                   n_params))
+        strict_cons = np.zeros(shape=(n_pairs,
+                                      n_groups,
+                                      n_params,
+                                      n_params))
         
         # Filling in the constraint comparisons
         for i, c in enumerate(group_combos):
@@ -720,8 +724,8 @@ class MulticlassBalancer:
             tpr_cons[i, c[1]] = tpr_flip * -1 * tprs[c[1]]
             fpr_cons[i, c[0]] = fpr_flip * fprs[c[0]]
             fpr_cons[i, c[1]] = fpr_flip * -1 * fprs[c[1]]
-            off_cons[i, c[0]] = off[c[0]]
-            off_cons[i, c[1]] = off[c[1]]
+            strict_cons[i, c[0]] = strict[c[0]]
+            strict_cons[i, c[1]] = -1 * strict[c[1]]
         
         # Filling in the norm constraints
         one_cons = np.zeros(shape=(n_groups * n_classes,
@@ -739,9 +743,9 @@ class MulticlassBalancer:
         # Reshaping the arrays
         tpr_cons = np.concatenate([np.hstack(m) for m in tpr_cons])
         fpr_cons = np.concatenate([np.hstack(m) for m in fpr_cons])
-        off_cons = np.concatenate([np.hstack(m) for m in off_cons])
+        strict_cons = np.concatenate([np.hstack(m) for m in strict_cons])
         
-        return tpr_cons, fpr_cons, off_cons, one_cons
+        return tpr_cons, fpr_cons, strict_cons, one_cons
 
     def adjust_new(self,
                goal='odds',
@@ -1073,7 +1077,6 @@ class MulticlassBalancer:
                goal='odds',
                loss='macro',
                round=4,
-               return_optima=False,
                summary=False,
                binom=False):
         """Adjusts predictions to satisfy a fairness constraint.
@@ -1090,9 +1093,6 @@ class MulticlassBalancer:
         round : int, default 4
             Decimal places for rounding results.
         
-        return_optima: bool, default True
-            Whether to reutn optimal loss and ROC coordinates.
-        
         summary : bool, default True
             Whether to print post-adjustment false-positive and true-positive \
             rates for each group.
@@ -1107,10 +1107,15 @@ class MulticlassBalancer:
             The optimal loss and ROC coordinates after adjustment.    
         """
         # Getting the costraint weights
-        constraints = [self.__get_constraints(self.p_vecs[i],
-                                              self.cp_mats[i])
-                               for i in range(self.n_groups)]
-        self.constraints = constraints
+        self.constraints = [self.__get_constraints(self.p_vecs[i],
+                                                   self.p_a[i],
+                                                   self.cp_mats[i])
+                            for i in range(self.n_groups)]
+        
+        # Arranging the constraint weights by group comparisons
+        tpr_cons, fpr_cons, strict_cons, norm_cons = self.__pair_constraints(
+            self.constraints
+            )
         
         # First option is macro loss, or the sum of the unweighted
         # conditional probabilities from above
@@ -1143,11 +1148,6 @@ class MulticlassBalancer:
             self.w = w
             self.obj = w.sum(2).flatten()
         
-        # Arranging the constraint weights by group comparisons
-        tpr_cons, fpr_cons, off_cons, norm_cons = self.__pair_constraints(
-            constraints
-            )
-        
         # Normazliation bounds; used in all scenarios
         norm_bounds = np.repeat(1, norm_cons.shape[0])
         
@@ -1163,10 +1163,11 @@ class MulticlassBalancer:
             con_bounds = np.concatenate([tpr_bounds, norm_bounds])
         
         elif 'strict' in goal:
-            con = np.concatenate([off_cons, norm_cons])
-            off_bounds = np.repeat(0, off_cons.shape[0])
-            con_bounds = np.concatenate([off_bounds, norm_bounds])
+            con = np.concatenate([strict_cons, norm_cons])
+            strict_bounds = np.repeat(0, strict_cons.shape[0])
+            con_bounds = np.concatenate([strict_bounds, norm_bounds])
         
+        self.goal = goal
         self.con = con
         self.con_bounds = con_bounds
         
@@ -1174,26 +1175,27 @@ class MulticlassBalancer:
         self.opt = sp.optimize.linprog(c=self.obj,
                                        bounds=[0, 1],
                                        A_eq=con,
-                                       b_eq=con_bounds)
-                                       #method='highs')
-        print('SCOTTS VERSION')
-        print(self.opt)
+                                       b_eq=con_bounds,
+                                       method='highs')
         
-        # Getting the Y~ matrices
-        self.m = tools.pars_to_cpmat(self.opt,
-                                     n_groups=self.n_groups,
-                                     n_classes=self.n_classes)
-        
-        # Calculating group-specific ROC scores from the new parameters
-        self.rocs = tools.parmat_to_roc(self.m,
-                                        self.p_vecs,
-                                        self.cp_mats)
-        
+        if self.opt.status == 0:
+            # Getting the Y~ matrices
+            self.m = tools.pars_to_cpmat(self.opt,
+                                         n_groups=self.n_groups,
+                                         n_classes=self.n_classes)
+            
+            # Calculating group-specific ROC scores from the new parameters
+            self.rocs = tools.parmat_to_roc(self.m,
+                                            self.p_vecs,
+                                            self.cp_mats)
+            self.loss = 1 - np.sum(self.p_y * self.rocs[0, :, 1])
+        else:
+            print('\nBalancing failed: Linear program is infeasible.\n')
+            self.rocs = np.nan
+            self.loss = np.nan
+            
         if summary:
             self.summary(org=False)
-        
-        if return_optima:                
-            return {'loss': self.theoretical_loss, 'roc': self.roc}
     
     def predict(self, y_, a, binom=False):
         """Generates bias-adjusted predictions on new data.
@@ -1230,11 +1232,11 @@ class MulticlassBalancer:
              s1=50,
              s2=50,
              preds=False,
-             optimum=True,
-             roc_curves=True,
+             optimum=False,
+             roc_curves=False,
              lp_lines='all', 
-             shade_hull=True,
-             chance_line=True,
+             shade_hull=False,
+             chance_line=False,
              palette='colorblind',
              style='white',
              xlim=(0, 1),
@@ -1281,22 +1283,33 @@ class MulticlassBalancer:
         A plot showing shapes were specified by the arguments.
         """
         # Setting basic plot parameters
-        plt.xlim(xlim)
-        plt.ylim(ylim)
         sns.set_theme()
         sns.set_style(style)
         cmap = sns.color_palette(palette, as_cmap=True)
         
-        # Plotting the unadjusted ROC coordinates
-        orig_coords = tools.group_roc_coords(self.__y, 
-                                             self.__y_, 
-                                             self.__a)
-        sns.scatterplot(x=orig_coords.fpr,
-                        y=orig_coords.tpr,
-                        hue=self.groups,
-                        s=s1,
-                        palette='colorblind')
-        plt.legend(loc='lower right')
+        # Organizing the ROC points by group (rbg) and by outcome (rbo)
+        rbg = [r for r in self.old_rocs.values()]
+        rbo = [np.concatenate([r.loc[i].values.reshape(1, -1) 
+                               for r in rbg], 0)
+               for i in range(self.n_classes)]
+        
+        # Making a tall df so we can use sns.relplot()
+        tall = deepcopy(rbg)
+        for i, df in enumerate(tall):
+            df['group'] = self.groups[i]
+            df['outcome'] = self.outcomes
+        tall = pd.concat(tall, axis=0)
+        
+        # Setting up the plots
+        rp = sns.relplot(x='fpr', 
+                         y='tpr', 
+                         hue='group', 
+                         col='outcome', 
+                         data=tall,
+                         kind='scatter',
+                         palette=palette)
+        rp.fig.set_tight_layout(True)
+        rp.set(xlim=(0, 1), ylim=(0, 1))
         
         # Plotting the adjusted coordinates
         if preds:
@@ -1312,104 +1325,104 @@ class MulticlassBalancer:
                             s=s2,
                             alpha=1)
         
-        # Optionally adding the ROC curves
-        if self.rocs is not None and roc_curves:
-            [plt.plot(r[0], r[1]) for r in self.rocs]
-        
-        # Optionally adding the chance line
-        if chance_line:
-            plt.plot((0, 1), (0, 1),
-                     color='lightgray')
-        
         # Adding lines to show the LP geometry
         if lp_lines:
-            # Getting the groupwise coordinates
-            group_rates = self.group_rates.values()
-            group_var = np.array([[g]*3 for g in self.groups]).flatten()
-            
             # Getting coordinates for the upper portions of the hulls
-            upper_x = np.array([[0, g.fpr, 1] for g in group_rates]).flatten()
-            upper_y = np.array([[0, g.tpr, 1] for g in group_rates]).flatten()
-            upper_df = pd.DataFrame((upper_x, upper_y, group_var)).T
-            upper_df.columns = ['x', 'y', 'group']
-            upper_df = upper_df.astype({'x': 'float',
-                                        'y': 'float',
-                                        'group': 'str'})
-            # Plotting the line
-            sns.lineplot(x='x', 
-                         y='y', 
-                         hue='group', 
-                         data=upper_df,
-                         alpha=0.75, 
-                         legend=False)
-            
-            # Optionally adding lower lines to complete the hulls
-            if lp_lines == 'all':
-                lower_x = np.array([[0, 1 - g.fpr, 1] 
-                                    for g in group_rates]).flatten()
-                lower_y = np.array([[0, 1 - g.tpr, 1] 
-                                    for g in group_rates]).flatten()
-                lower_df = pd.DataFrame((lower_x, lower_y, group_var)).T
-                lower_df.columns = ['x', 'y', 'group']
-                lower_df = lower_df.astype({'x': 'float',
+            for i, ax in enumerate(rp.axes[0]):
+                g_r = pd.DataFrame(rbo[i], columns=['fpr', 'tpr'])
+                group_var = np.array([[g]*3 for g in self.groups]).flatten()
+                upper_x = np.array([[0, fpr, 1] 
+                                    for fpr in g_r.fpr.values]).flatten()
+                upper_y = np.array([[0, tpr, 1] 
+                                    for tpr in g_r.tpr.values]).flatten()
+                upper_df = pd.DataFrame((upper_x, upper_y, group_var)).T
+                upper_df.columns = ['x', 'y', 'group']
+                upper_df = upper_df.astype({'x': 'float',
                                             'y': 'float',
                                             'group': 'str'})
+                
                 # Plotting the line
                 sns.lineplot(x='x', 
                              y='y', 
                              hue='group', 
-                             data=lower_df,
+                             data=upper_df,
+                             ax=ax,
                              alpha=0.75, 
                              legend=False)
                 
-            # Shading the area under the lines
-            if shade_hull:
-                for i, group in enumerate(self.groups):
-                    uc = upper_df[upper_df.group == group]
-                    u_null = np.array([0, uc.x.values[1], 1])
-                                        
-                    if lp_lines == 'upper':
-                        plt.fill_between(x=uc.x,
-                                         y1=uc.y,
-                                         y2=u_null,
-                                         color=cmap[i],
-                                         alpha=0.2) 
-                    if lp_lines == 'all':
-                        lc = lower_df[lower_df.group == group]
-                        l_null = np.array([0, lc.x.values[1], 1])
-                        plt.fill_between(x=uc.x,
-                                         y1=uc.y,
-                                         y2=u_null,
-                                         color=cmap[i],
-                                         alpha=0.2) 
-                        plt.fill_between(x=lc.x,
-                                         y1=l_null,
-                                         y2=lc.y,
-                                         color=cmap[i],
-                                         alpha=0.2)        
-        
+                # Optionally adding lower lines to complete the hulls
+                if lp_lines == 'all':
+                    lower_x = np.array([[0, 1 - fpr, 1] 
+                                        for fpr in g_r.fpr.values]).flatten()
+                    lower_y = np.array([[0, 1 - tpr, 1] 
+                                        for tpr in g_r.tpr.values]).flatten()
+                    lower_df = pd.DataFrame((lower_x, lower_y, group_var)).T
+                    lower_df.columns = ['x', 'y', 'group']
+                    lower_df = lower_df.astype({'x': 'float',
+                                                'y': 'float',
+                                                'group': 'str'})
+                    # Plotting the line
+                    sns.lineplot(x='x', 
+                                 y='y', 
+                                 hue='group', 
+                                 data=lower_df,
+                                 ax=ax,
+                                 alpha=0.75, 
+                                 legend=False)
+                
+                if shade_hull:
+                    for i, group in enumerate(self.groups):
+                        uc = upper_df[upper_df.group == group]
+                        u_null = np.array([0, uc.x.values[1], 1])
+                                            
+                        if lp_lines == 'upper':
+                            ax.fill_between(x=uc.x,
+                                            y1=uc.y,
+                                            y2=u_null,
+                                            color=cmap[i],
+                                            alpha=0.1) 
+                        if lp_lines == 'all':
+                            lc = lower_df[lower_df.group == group]
+                            l_null = np.array([0, lc.x.values[1], 1])
+                            ax.fill_between(x=uc.x,
+                                            y1=uc.y,
+                                            y2=u_null,
+                                            color=cmap[i],
+                                            alpha=0.1) 
+                            ax.fill_between(x=lc.x,
+                                             y1=l_null,
+                                             y2=lc.y,
+                                             color=cmap[i],
+                                             alpha=0.1)
+                
         # Optionally adding the post-adjustment optimum
         if optimum:
-            if self.roc is None:
+            if self.rocs is None:
                 print('.adjust() must be called before optimum can be shown.')
                 pass
             
-            elif 'odds' in self.goal:
-                plt.scatter(self.roc[0],
-                                self.roc[1],
-                                marker='x',
-                                color='black')
-            
-            elif 'opportunity' in self.goal:
-                plt.hlines(self.roc[1],
-                           xmin=0,
-                           xmax=1,
-                           color='black',
-                           linestyles='--',
-                           linewidths=0.5)
-            
-            elif 'parity' in self.goal:
-                pass
+            for i, ax in enumerate(rp.axes[0]):
+                if ('odds' in self.goal) | ('strict' in self.goal):
+                    ax.scatter(self.rocs[0, i, 0],
+                               self.rocs[0, i, 1],
+                               marker='x',
+                               color='black')
+                
+                elif 'opportunity' in self.goal:
+                    ax.hlines(self.rocs[0, i, 1],
+                              xmin=0,
+                              xmax=1,
+                              color='black',
+                              linestyles='--',
+                              linewidths=0.5)
+                
+                elif 'parity' in self.goal:
+                    pass
+        
+        # Optionally adding the chance line
+        if chance_line:
+            [ax.plot((0, 1), (0, 1), color='lightgray') 
+             for ax in rp.axes[0]]
         
         plt.show()
     
@@ -1435,10 +1448,21 @@ class MulticlassBalancer:
         
         if adj:
             # Casting the post-adjustment ROC scores as a DF
-            adj_coords = pd.DataFrame(self.rocs[0],
-                                      columns=['fpr', 'tpr']).round(round)
+            if 'opportunity' in self.goal:
+                print('\nPost-adjustment group rates are \n')
+                for i, r in enumerate(self.rocs):
+                    print(self.groups[i])
+                    adj_coords = pd.DataFrame(r, columns=['fpr', 'tpr'])
+                    adj_coords = adj_coords.round(round)
+                    print(adj_coords.to_string(index=False))
+                    print('\n')
+            else:
+                adj_coords = pd.DataFrame(self.rocs[0],
+                                          columns=['fpr', 'tpr']).round(round)
+                print('\nPost-adjustment rates for all groups are \n')
+                print(adj_coords.to_string(index=False))
+            
             adj_loss = 1 - np.sum(self.p_y * adj_coords.tpr.values)
-            print('\nPost-adjustment rates for all groups are \n')
-            print(adj_coords.to_string(index=False))
             print('\nAnd loss is %.4f\n' %adj_loss)
+
 
