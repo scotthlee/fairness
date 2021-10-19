@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import statsmodels.formula.api as smf
 
 from sklearn.ensemble import RandomForestClassifier
 from matplotlib import pyplot as plt
@@ -7,8 +8,6 @@ from matplotlib import pyplot as plt
 import tools
 import balancers
 
-# Reading in the experimental data
-exp = pd.read_csv('~/Desktop/exp_stats.csv')
 
 '''Part 1: Working with COMPAS'''
 # Building an RF to predict recidivism
@@ -83,3 +82,34 @@ tb_probs = tb_rf.oob_decision_function_
 tb_preds = np.array([cd4_levels[i] for i in np.argmax(tb_probs, axis=1)])
 
 b = balancers.MulticlassBalancer(tb_y, tb_preds, sex)
+
+'''Part 3: Working with the synthetic experiments data'''
+# Reading in the  data
+exp = pd.read_csv('~/Desktop/exp_stats.csv')
+
+# Making a variable for relative difference in accuracy
+acc_diff = (exp.new_acc - exp.old_acc) / exp.old_acc
+exp['acc_diff'] = acc_diff
+
+# Separating by n_groups
+exp2 = exp[exp.n_groups == 2]
+exp3 = exp[exp.n_groups == 3]
+
+# Getting some basic odds ratios for triviality
+factors = ['loss', 'goal', 'class_balance', 'group_balance']
+triv_ors2 = [[tools.odds_ratio(exp2.trivial, exp2[fac] == f)
+              for f in exp2[fac].unique()]
+             for fac in factors]
+triv_ors3 = [[tools.odds_ratio(exp3.trivial, exp3[fac] == f)
+              for f in exp3[fac].unique()]
+             for fac in factors]
+
+# And running some simple linear regressions for accuracy
+acc_mod2 = smf.ols('acc_diff ~ loss + goal + class_balance + group_balance',
+                   data=exp2)
+acc_res2 = acc_mod2.fit()
+acc_mod3 = smf.ols('acc_diff ~ loss + goal + class_balance + group_balance',
+                   data=exp3)
+acc_res3 = acc_mod3.fit()
+
+
