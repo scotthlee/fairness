@@ -13,6 +13,8 @@ from copy import deepcopy
 from multiprocessing import Pool
 from copy import deepcopy
 
+import balancers
+
 
 class CLFRates:
     def __init__(self,
@@ -31,6 +33,160 @@ class CLFRates:
         self.fnr = np.round(fn / (fn + tp), round)
         self.fpr = np.round(fp / (fp + tn), round)
         self.acc = (tn + tp) / len(y)
+
+
+def prob_perms(n_outcomes,
+               n_groups,
+               p_step=.1):
+    # Range of discrete probabilities to choose from
+    p_range = np.arange(p_step, 1 + p_step, p_step)
+    
+    # Permutations of group probabilities
+    p_groups = [np.array(a) for a in combinations(p_range, n_groups)
+                if np.sum(a) == 1]
+    
+    # Permutations of outcome probs for a single group
+    p_y = [a for a in combinations(p_range, n_outcomes)
+           if np.sum(a) == 1]
+    
+    # Perms of perms of outcome probabilities for all groups
+    p_y_groups = [np.array(t) for t in combinations(p_y * n_groups,
+                                          n_groups)]
+    
+    # Perms of conditional probabilities for a single group
+    p_yh = [np.array(t) for t in combinations(p_y * n_outcomes,
+                                    n_outcomes)]
+    
+    # Perms of perms of conditional probabilities for all groups
+    p_yh_groups = [np.array(t) for t in combinations(p_yh * n_groups,
+                                           n_groups)]
+    
+    # Combinations of group probability perms and outcome probability perms
+    perms = [[[[x, y, z] for z in p_yh_groups]
+              for y in p_y_groups] 
+             for x in p_groups]
+    
+    return perms
+
+
+def test_run(outcomes,
+             groups,
+             p_group,
+             p_y_group,
+             p_yh_group,
+             loss='micro',
+             goal='odds',
+             g_bal=None,
+             c_bal=None,
+             pred_b=None):
+    # Simulating the input data
+    y_test = simulate_y(outcomes,
+                        groups,
+                        p_group,
+                        p_y_group)
+    yh_test = simulate_yh(y_test,
+                          p_yh_group,
+                          outcomes)
+    
+    # Setting up the variables
+    y = yh_test.y.values
+    a = yh_test.group.values
+    yh = yh_test.y_hat.values
+    
+    # Running the optimizations
+    b = balancers.MulticlassBalancer(y, yh, a)
+    b.adjust(loss=loss, goal=goal)
+    status = b.opt.status
+    old_acc = np.dot(b.p_y, np.diag(b.cp_mat))
+    if status == 0:
+        new_acc = 1 - b.loss
+        acc_diff = (new_acc - old_acc) / old_acc
+        mean_tpr = 1 - b.macro_loss
+        new_roc = b.rocs[0]
+        old_roc = np.array([cpmat_to_roc(b.p_vecs[i],
+                                        b.cp_mats[i])
+                           for i in range(len(b.cp_mats))])
+        if np.any(np.sum(new_roc, axis=1) == 0):
+            trivial = 1
+        else:
+            trivial = 0
+    else:
+        new_acc = np.nan
+        acc_diff = np.nan
+        mean_tpr = np.nan
+        trivial = np.nan
+        new_roc = np.nan
+        old_roc = np.nan
+    
+    # Bundling things up
+    out_df = pd.DataFrame([goal, loss, status, 
+                           trivial, old_acc, new_acc,
+                           acc_diff, mean_tpr]).transpose()
+    out_df.columns = ['goal', 'loss', 'status', 
+                      'trivial', 'old_acc', 'new_acc'
+                      'acc_diff', 'mean_tpr']
+    if g_bal:
+        out_df['group_balance'] = g_bal
+    if c_bal:
+        out_df['class_balance'] = c_bal
+    if pred_b:
+        out_df['pred_bias'] = pred_b
+    
+    out = {'stats': out_df, 
+           'old_rocs': old_roc, 
+           'new_rocs': new_roc}
+    
+    return out
+
+
+def simulate_y(y_levels,
+               a_levels,
+               p_a,
+               p_y_a,
+               n=1000,
+               seed=2021):
+    # Setting the seeds
+    np.random.seed(seed)
+    seeds = np.random.randint(1, 1e6, len(p_a))
+    
+    # Filling in the data
+    y_out = []
+    a_out = []
+    for i, a in enumerate(p_y_a):
+        n_a = int(p_a[i] * n)
+        a_out.append([a_levels[i]] * n_a)
+        np.random.seed(seeds[i])
+        y_out.append(np.random.choice(a=y_levels,
+                                      p=a,
+                                      size=n_a))
+    out_df = pd.DataFrame((np.concatenate(a_out),
+                           np.concatenate(y_out))).transpose()
+    out_df.columns = ['group', 'y']
+    return out_df
+
+
+def simulate_yh(test_df,
+                p_y_a,
+                outcomes,
+                seed=2021):
+    pd.options.mode.chained_assignment = None
+    test_df['y_hat'] = 0
+    groups = test_df.group.unique()
+    np.random.seed(seed)
+    seeds = np.random.randint(0, 1e6, len(groups))
+    for i, a in enumerate(groups):
+        for j, y in enumerate(outcomes):
+            y_ids = np.where((test_df.group == a) &
+                              (test_df.y == y))[0]
+            np.random.seed(seeds[i])
+            test_df.y_hat[y_ids] = np.random.choice(a=outcomes,
+                                                    p=p_y_a[i][j],
+                                                    size=len(y_ids))
+    return test_df
+
+
+def flatten(l):
+    return [item for sublist in l for item in sublist]
 
 
 def make_multi_predictor(y, p, catvar=None):
@@ -65,7 +221,6 @@ def make_multi_predictor(y, p, catvar=None):
         out[ids] = cats
     
     return out
-    
     
 
 def make_predictor(y, tpr, fpr, catvar=None):
@@ -237,25 +392,20 @@ def brier_score(true, pred):
 def clf_metrics(true, 
                 pred,
                 average='weighted',
+                preds_are_probs=False,
                 cutpoint=0.5,
                 mod_name=None,
                 round=4,
-                pred_type='numeric',
-                preds_are_probs=False,
                 round_pval=False,
                 mcnemar=False,
                 argmax_axis=1):
+    '''Runs basic diagnostic stats on binary (only) predictions'''
     # Converting pd.Series to np.array
     stype = type(pd.Series())
     if type(pred) == stype:
         pred = pred.values
     if type(true) == stype:
         true = true.values
-    
-    # Figuring out if the guesses are classes or probabilities
-    if pred_type == 'numeric':
-        if np.any([0 < p < 1 for p in pred.flatten()]):
-            preds_are_probs = True
     
     # Optional exit for doing averages with multiclass/label inputs
     if len(np.unique(true)) > 2:
@@ -264,10 +414,6 @@ def clf_metrics(true,
         
         # Argmaxing for when we have probabilities
         if preds_are_probs:
-            # Softmaxing the probabilities if it hasn't already been done
-            if np.sum(pred[0]) > 1:
-                pred = np.array([np.exp(p) / np.sum(np.exp(p)) for p in pred])
-            
             auc = roc_auc_score(true,
                                 pred,
                                 average=average,
@@ -286,7 +432,7 @@ def clf_metrics(true,
         stats = pd.concat(stats, axis=0)
         stats.fillna(0, inplace=True)
         cols = stats.columns.values
-
+        
         # Calculating the averaged metrics
         if average == 'weighted':
             weighted = np.average(stats, 
@@ -333,27 +479,26 @@ def clf_metrics(true,
     fp = confmat[0, 1]
     tn = confmat[0, 0]
     fn = confmat[1, 0]
-
+    
     # Calculating the main binary metrics
     ppv = np.round(tp / (tp + fp), round) if tp + fp > 0 else 0
     sens = np.round(tp / (tp + fn), round) if tp + fn > 0 else 0
     spec = np.round(tn / (tn + fp), round) if tn + fp > 0 else 0
     npv = np.round(tn / (tn + fn), round) if tn + fn > 0 else 0
-    f1 = np.round(2 * (sens * ppv) /
-                  (sens + ppv), round) if sens + ppv != 0 else 0
-
+    f1 = np.round(2*(sens*ppv) / (sens+ppv), round) if sens + ppv != 0 else 0 
+    
     # Calculating the Matthews correlation coefficient
     mcc_num = ((tp * tn) - (fp * fn))
-    mcc_denom = np.sqrt(((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)))
+    mcc_denom = np.sqrt(((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn)))
     mcc = mcc_num / mcc_denom if mcc_denom != 0 else 0
-
+    
     # Calculating Youden's J and the Brier score
     j = sens + spec - 1
     
     # Rolling everything so far into a dataframe
-    outmat = np.array(
-        [tp, fp, tn, fn, sens, spec, ppv, npv, j, f1, mcc,
-         brier]).reshape(-1, 1)
+    outmat = np.array([tp, fp, tn, fn,
+                       sens, spec, ppv,
+                       npv, j, f1, mcc, brier]).reshape(-1, 1)
     out = pd.DataFrame(outmat.transpose(),
                        columns=['tp', 'fp', 'tn', 
                                 'fn', 'sens', 'spec', 'ppv',
@@ -364,8 +509,8 @@ def clf_metrics(true,
         out['auc'] = auc
         out['ap'] = ap
     else:
-        out['auc'] = 0.0
-        out['ap'] = 0.0
+        out['auc'] = 0
+        out['ap'] = 0
     
     # Calculating some additional measures based on positive calls
     true_prev = int(np.sum(true == 1))
@@ -376,13 +521,13 @@ def clf_metrics(true,
         pval = mcnemar_test(true, pred).pval[0]
         if round_pval:
             pval = np.round(pval, round)
-    count_outmat = np.array([true_prev, pred_prev, abs_diff,
+    count_outmat = np.array([true_prev, pred_prev, abs_diff, 
                              rel_diff]).reshape(-1, 1)
-    count_out = pd.DataFrame(
-        count_outmat.transpose(),
-        columns=['true_prev', 'pred_prev', 'prev_diff', 'rel_prev_diff'])
+    count_out = pd.DataFrame(count_outmat.transpose(),
+                             columns=['true_prev', 'pred_prev', 
+                                      'prev_diff', 'rel_prev_diff'])
     out = pd.concat([out, count_out], axis=1)
-
+    
     # Optionally dropping the mcnemar p-val
     if mcnemar:
         out['mcnemar'] = pval
@@ -390,7 +535,7 @@ def clf_metrics(true,
     # And finally tacking on the model name
     if mod_name is not None:
         out['model'] = mod_name
-
+    
     return out
 
 
@@ -863,14 +1008,6 @@ def grid_metrics(targets,
     return pd.concat(scores, axis=0)
 
 
-def onehot_matrix(y, sparse=False):
-    if not sparse:
-        y_mat = np.zeros((y.shape[0], len(np.unique(y))))
-        for row, col in enumerate(y):
-            y_mat[row, col] = 1
-    return y_mat
-
-
 # Converts a boot_cis['cis'] object to a single row
 def merge_cis(c, round=4, mod_name=''):
     str_cis = c.round(round).astype(str)
@@ -959,18 +1096,3 @@ def cpmat_to_roc(p_vec, cp_mat):
     out = pd.DataFrame([fprs, tprs]).T
     out.columns = ['fpr', 'tpr']
     return out
-    
-    
-def sparsify(col, reshape=True, return_df=True, long_names=False):
-    '''Makes a sparse array of a data frame of categorical variables'''
-    levels = np.unique(col)
-    out = np.array([col == level for level in levels],
-                   dtype=np.uint8).transpose()
-    if long_names:
-        var = col.name + '.'
-        levels = [var + level for level in levels]
-    columns = [col.lower() for col in levels]
-    if return_df:
-        out = pd.DataFrame(out, columns=columns)
-    return out
-    
