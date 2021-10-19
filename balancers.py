@@ -1155,10 +1155,12 @@ class MulticlassBalancer:
                                             self.p_vecs,
                                             self.cp_mats)
             self.loss = 1 - np.sum(self.p_y * self.rocs[0, :, 1])
+            self.macro_loss = 1 - np.mean(self.rocs[0, :, 1])
         else:
             print('\nBalancing failed: Linear program is infeasible.\n')
             self.rocs = np.nan
             self.loss = np.nan
+            self.macro_loss = np.nan
             
         if summary:
             self.summary(org=False)
