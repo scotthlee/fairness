@@ -846,20 +846,34 @@ class MulticlassBalancer:
             self.opt = sp.optimize.linprog(c=loss_coefs,
                                        bounds=[0, 1],
                                        A_eq=cons_mat,
-                                       b_eq=cons_bounds,
-                                       method='highs')
+                                       b_eq=cons_bounds)
+                                       #method='highs')
+            self.con_bounds = cons_bounds
+            self.cons = cons_mat
         else:
             # constraints for normalization are still equality, but
-            # constraints for equality across groups are inequality
-            cons_norm_bounds = #TODO
-            cons_ineq_bounds = np.ones(cons_mat.shape[0]) * slack
+            # constraints for equality across groups are relaxed (small inequalities allowed)
+            cons_norm_bounds = np.ones(cons_norm.shape[0]) 
+
+            # Have to account for abs value of the difference being within slack
+            # by adding a second set of constraints. AX < slack represents ax - bx < slack
+            # -AX < slack represents ax - bx > -slack
+            cons_ineq_bounds = np.ones(2 * cons_mat.shape[0]) * slack
+            abs_val_cons = np.concatenate([cons_mat, -cons_mat], axis=0)
             self.opt = sp.optimize.linprog(c=loss_coefs,
                                        bounds=[0, 1],
                                        A_eq=cons_norm,
                                        b_eq=cons_norm_bounds,
-                                       A_ub=cons_mat,
-                                       b_ub=cons_ineq_bounds
-                                       method='highs')
+                                       A_ub=abs_val_cons,
+                                       b_ub=cons_ineq_bounds)
+                                       #method='highs')
+            # tbh not sure if any of this really makes sense to do sense the
+            # attributes will vary based on the inputs-does anything actually
+            # need to access the bounds after running?
+            self.con_bounds = cons_norm_bounds
+            self.con_ineq_bounds = cons_ineq_bounds
+            self.con = abs_val_cons
+            self.con_norm = cons_norm_bounds
         
   
         print(self.opt)
@@ -885,8 +899,6 @@ class MulticlassBalancer:
   #      print(W[:, :, 2])
         self.rocs = tools.parmat_to_roc(y_derived, self.p_vecs, self.cp_mats)
 
-        self.con = cons_mat
-        self.con_bounds = cons_bounds
 
         if summary:
             self.summary(org=False)
@@ -1162,8 +1174,8 @@ class MulticlassBalancer:
         self.opt = sp.optimize.linprog(c=self.obj,
                                        bounds=[0, 1],
                                        A_eq=con,
-                                       b_eq=con_bounds,
-                                       method='highs')
+                                       b_eq=con_bounds)
+                                       #method='highs')
         print('SCOTTS VERSION')
         print(self.opt)
         
