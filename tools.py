@@ -123,7 +123,7 @@ def test_run(outcomes,
                            trivial, old_acc, new_acc,
                            acc_diff, mean_tpr]).transpose()
     out_df.columns = ['goal', 'loss', 'status', 
-                      'trivial', 'old_acc', 'new_acc'
+                      'trivial', 'old_acc', 'new_acc',
                       'acc_diff', 'mean_tpr']
     if g_bal:
         out_df['group_balance'] = g_bal
@@ -1095,4 +1095,18 @@ def cpmat_to_roc(p_vec, cp_mat):
            np.sum(np.delete(p_vec, i)) for i in range(cp_mat.shape[0])]
     out = pd.DataFrame([fprs, tprs]).T
     out.columns = ['fpr', 'tpr']
+    return out
+
+
+def sparsify(col, reshape=True, return_df=True, long_names=False):
+    '''Makes a sparse array of a data frame of categorical variables'''
+    levels = np.unique(col)
+    out = np.array([col == level for level in levels],
+                   dtype=np.uint8).transpose()
+    if long_names:
+        var = col.name + '.'
+        levels = [var + level for level in levels]
+    columns = [col.lower() for col in levels]
+    if return_df:
+        out = pd.DataFrame(out, columns=columns)
     return out
