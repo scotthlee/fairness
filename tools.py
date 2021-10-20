@@ -129,8 +129,10 @@ def test_run(outcomes,
         mx_mn_diff_j = j_diff_means[np.argmax(np.abs(j_diff_means))]
         mx_j_diff = j_diffs.flatten()[np.argmax(np.abs(j_diffs.flatten()))]
         
-        if np.any(np.sum(new_rocs, axis=1) == 0):
+        if np.any(np.sum(new_rocs, axis=2) == 0):
             trivial = 1
+            if np.any(np.mean(new_rocs, axis=2) == 1):
+                trivial = 2
         else:
             trivial = 0
     else:
