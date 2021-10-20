@@ -88,7 +88,7 @@ b = balancers.MulticlassBalancer(tb_y, tb_preds, sex)
 exp = pd.read_csv('~/Desktop/exp_stats.csv')
 
 # Making a variable for relative difference in accuracy
-acc_diff = (exp.new_acc - exp.old_acc) / exp.old_acc
+tpr_diff = (exp.new_acc - exp.old_acc) / exp.old_acc
 exp['acc_diff'] = acc_diff
 
 # Separating by n_groups
@@ -105,11 +105,10 @@ triv_ors3 = [[tools.odds_ratio(exp3.trivial, exp3[fac] == f)
              for fac in factors]
 
 # And running some simple linear regressions for accuracy
-acc_mod2 = smf.ols('acc_diff ~ loss + goal + class_balance + group_balance',
+micro_mod2 = smf.ols('acc_diff ~ loss + goal + class_balance + group_balance',
                    data=exp2)
-acc_res2 = acc_mod2.fit()
-acc_mod3 = smf.ols('acc_diff ~ loss + goal + class_balance + group_balance',
+micro_res2 = acc_mod2.fit()
+micro_mod3 = smf.ols('acc_diff ~ loss + goal + class_balance + group_balance',
                    data=exp3)
-acc_res3 = acc_mod3.fit()
-
+micro_res3 = acc_mod3.fit()
 

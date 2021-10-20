@@ -638,7 +638,7 @@ class MulticlassBalancer:
         old_rocs = [tools.cpmat_to_roc(self.p_vecs[i],
                                        self.cp_mats[i])
                     for i in range(self.n_groups)]
-        self.old_rocs = dict(zip(self.groups, old_rocs))
+        self.old_rocs = np.array(old_rocs)
         
         if summary:
             self.summary(adj=False)

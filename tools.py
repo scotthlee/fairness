@@ -99,14 +99,37 @@ def test_run(outcomes,
     status = b.opt.status
     old_acc = np.dot(b.p_y, np.diag(b.cp_mat))
     if status == 0:
+        # Getting loss and other basic metrics
         new_acc = 1 - b.loss
         acc_diff = (new_acc - old_acc) / old_acc
+        new_rocs = b.rocs
+        old_rocs = np.array([cpmat_to_roc(b.p_vecs[i],
+                                          b.cp_mats[i])
+                             for i in range(len(b.cp_mats))])
+        
+        # Getting tpr-specific metrics
         mean_tpr = 1 - b.macro_loss
-        new_roc = b.rocs[0]
-        old_roc = np.array([cpmat_to_roc(b.p_vecs[i],
-                                        b.cp_mats[i])
-                           for i in range(len(b.cp_mats))])
-        if np.any(np.sum(new_roc, axis=1) == 0):
+        old_tprs = b.old_rocs[:, :, 1]
+        new_tprs = b.rocs[:, :, 1]
+        
+        old_tpr_means = np.mean(old_tprs, axis=1)
+        new_tpr_means = np.mean(new_tprs, axis=1)
+        mean_diffs = (new_tpr_means / old_tpr_means) / old_tpr_means
+        mn_mn_tpr_diff = np.mean(mean_diffs)
+        mx_mn_tpr_diff = mean_diffs[np.argmax(np.abs(mean_diffs))]
+        
+        tpr_diffs = ((new_tprs - old_tprs) / old_tprs).flatten()
+        mx_tpr_diff = tpr_diffs[np.argmax(np.abs(tpr_diffs))]
+        
+        old_j = (1 - old_rocs[:, :, 0]) + old_rocs[:, :, 1] - 1
+        new_j = (1 - new_rocs[:, :, 0]) + new_rocs[:, :, 1] - 1
+        j_diffs = new_j - old_j
+        j_diff_means = j_diffs.mean(axis=1)
+        mn_mn_diff_j = j_diff_means.mean()
+        mx_mn_diff_j = j_diff_means[np.argmax(np.abs(j_diff_means))]
+        mx_j_diff = j_diffs.flatten()[np.argmax(np.abs(j_diffs.flatten()))]
+        
+        if np.any(np.sum(new_rocs, axis=1) == 0):
             trivial = 1
         else:
             trivial = 0
@@ -121,10 +144,14 @@ def test_run(outcomes,
     # Bundling things up
     out_df = pd.DataFrame([goal, loss, status, 
                            trivial, old_acc, new_acc,
-                           acc_diff, mean_tpr]).transpose()
+                           acc_diff, mean_tpr, mn_mn_tpr_diff,
+                           mx_mn_tpr_diff, mx_tpr_diff,
+                           mn_mn_diff_j, mx_mn_diff_j, mx_j_diff]).transpose()
     out_df.columns = ['goal', 'loss', 'status', 
                       'trivial', 'old_acc', 'new_acc',
-                      'acc_diff', 'mean_tpr']
+                      'acc_diff', 'mean_tpr', 'mean_mean_tpr_diff',
+                      'max_mean_tpr_diff', 'max_tpr_diff', 'mean_mean_j_diff',
+                      'max_mean_j_diff', 'max_j_diff']
     if g_bal:
         out_df['group_balance'] = g_bal
     if c_bal:
@@ -133,8 +160,8 @@ def test_run(outcomes,
         out_df['pred_bias'] = pred_b
     
     out = {'stats': out_df, 
-           'old_rocs': old_roc, 
-           'new_rocs': new_roc}
+           'old_rocs': old_rocs, 
+           'new_rocs': new_rocs}
     
     return out
 
