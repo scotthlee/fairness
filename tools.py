@@ -421,14 +421,12 @@ def brier_score(true, pred):
 def clf_metrics(true, 
                 pred,
                 average='weighted',
-                preds_are_probs=False,
                 cutpoint=0.5,
                 mod_name=None,
                 round=4,
                 round_pval=False,
                 mcnemar=False,
                 argmax_axis=1):
-    '''Runs basic diagnostic stats on binary (only) predictions'''
     # Converting pd.Series to np.array
     stype = type(pd.Series())
     if type(pred) == stype:
@@ -436,10 +434,20 @@ def clf_metrics(true,
     if type(true) == stype:
         true = true.values
     
+    # Figuring out if the guesses are classes or probabilities
+    if np.any([0 < p < 1 for p in pred.flatten()]):
+        preds_are_probs = True
+    else:
+        preds_are_probs = False
+    
     # Optional exit for doing averages with multiclass/label inputs
     if len(np.unique(true)) > 2:
         # Getting binary metrics for each set of results
         codes = np.unique(true)
+        
+        # Softmaxing the probabilities if it hasn't already been done
+        if np.sum(pred[0]) > 1:
+            pred = np.array([np.exp(p) / np.sum(np.exp(p)) for p in pred])
         
         # Argmaxing for when we have probabilities
         if preds_are_probs:
@@ -461,7 +469,7 @@ def clf_metrics(true,
         stats = pd.concat(stats, axis=0)
         stats.fillna(0, inplace=True)
         cols = stats.columns.values
-        
+
         # Calculating the averaged metrics
         if average == 'weighted':
             weighted = np.average(stats, 
@@ -508,26 +516,27 @@ def clf_metrics(true,
     fp = confmat[0, 1]
     tn = confmat[0, 0]
     fn = confmat[1, 0]
-    
+
     # Calculating the main binary metrics
     ppv = np.round(tp / (tp + fp), round) if tp + fp > 0 else 0
     sens = np.round(tp / (tp + fn), round) if tp + fn > 0 else 0
     spec = np.round(tn / (tn + fp), round) if tn + fp > 0 else 0
     npv = np.round(tn / (tn + fn), round) if tn + fn > 0 else 0
-    f1 = np.round(2*(sens*ppv) / (sens+ppv), round) if sens + ppv != 0 else 0 
-    
+    f1 = np.round(2 * (sens * ppv) /
+                  (sens + ppv), round) if sens + ppv != 0 else 0
+
     # Calculating the Matthews correlation coefficient
     mcc_num = ((tp * tn) - (fp * fn))
-    mcc_denom = np.sqrt(((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn)))
+    mcc_denom = np.sqrt(((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)))
     mcc = mcc_num / mcc_denom if mcc_denom != 0 else 0
-    
+
     # Calculating Youden's J and the Brier score
     j = sens + spec - 1
     
     # Rolling everything so far into a dataframe
-    outmat = np.array([tp, fp, tn, fn,
-                       sens, spec, ppv,
-                       npv, j, f1, mcc, brier]).reshape(-1, 1)
+    outmat = np.array(
+        [tp, fp, tn, fn, sens, spec, ppv, npv, j, f1, mcc,
+         brier]).reshape(-1, 1)
     out = pd.DataFrame(outmat.transpose(),
                        columns=['tp', 'fp', 'tn', 
                                 'fn', 'sens', 'spec', 'ppv',
@@ -538,8 +547,8 @@ def clf_metrics(true,
         out['auc'] = auc
         out['ap'] = ap
     else:
-        out['auc'] = 0
-        out['ap'] = 0
+        out['auc'] = 0.0
+        out['ap'] = 0.0
     
     # Calculating some additional measures based on positive calls
     true_prev = int(np.sum(true == 1))
@@ -550,13 +559,13 @@ def clf_metrics(true,
         pval = mcnemar_test(true, pred).pval[0]
         if round_pval:
             pval = np.round(pval, round)
-    count_outmat = np.array([true_prev, pred_prev, abs_diff, 
+    count_outmat = np.array([true_prev, pred_prev, abs_diff,
                              rel_diff]).reshape(-1, 1)
-    count_out = pd.DataFrame(count_outmat.transpose(),
-                             columns=['true_prev', 'pred_prev', 
-                                      'prev_diff', 'rel_prev_diff'])
+    count_out = pd.DataFrame(
+        count_outmat.transpose(),
+        columns=['true_prev', 'pred_prev', 'prev_diff', 'rel_prev_diff'])
     out = pd.concat([out, count_out], axis=1)
-    
+
     # Optionally dropping the mcnemar p-val
     if mcnemar:
         out['mcnemar'] = pval
@@ -564,7 +573,7 @@ def clf_metrics(true,
     # And finally tacking on the model name
     if mod_name is not None:
         out['model'] = mod_name
-    
+
     return out
 
 

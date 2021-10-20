@@ -51,7 +51,19 @@ cp_stats = tools.clf_metrics(y, score/10)
 b = balancers.MulticlassBalancer(np.array([p for p in prob_cut]), 
                                  np.array([s for s in score_cut]), 
                                  race)
+
+# Odds with macro loss
 b.adjust(goal='odds', loss='macro')
+b.summary()
+b.plot()
+
+# Equalized odds with micro loss
+b.adjust(goal='odds', loss='micro')
+b.summary()
+b.plot()
+
+# Strict goal with macro loss
+b.adjust(goal='strict', loss='macro')
 b.summary()
 b.plot()
 
@@ -87,10 +99,6 @@ b = balancers.MulticlassBalancer(tb_y, tb_preds, sex)
 # Reading in the  data
 exp = pd.read_csv('~/Desktop/exp_stats.csv')
 
-# Making a variable for relative difference in accuracy
-tpr_diff = (exp.new_acc - exp.old_acc) / exp.old_acc
-exp['acc_diff'] = acc_diff
-
 # Separating by n_groups
 exp2 = exp[exp.n_groups == 2]
 exp3 = exp[exp.n_groups == 3]
@@ -107,8 +115,8 @@ triv_ors3 = [[tools.odds_ratio(exp3.trivial, exp3[fac] == f)
 # And running some simple linear regressions for accuracy
 micro_mod2 = smf.ols('acc_diff ~ loss + goal + class_balance + group_balance',
                    data=exp2)
-micro_res2 = acc_mod2.fit()
+micro_res2 = micro_mod2.fit()
 micro_mod3 = smf.ols('acc_diff ~ loss + goal + class_balance + group_balance',
                    data=exp3)
-micro_res3 = acc_mod3.fit()
+micro_res3 = micro_mod3.fit()
 
