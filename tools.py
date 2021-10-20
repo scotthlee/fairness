@@ -1108,12 +1108,14 @@ def parmat_to_roc(par_mats,
     '''Takes the tensor of parameters from the LP and gets sensitivity and 
     specificity for each group.
     '''
+    print(par_mats.shape)
     n_groups = len(p_vecs)
     n_classes = len(p_vecs[0])
     rocs = np.zeros(shape=(n_groups, n_classes, 2))
     for i, par_mat in enumerate(par_mats):
         p = p_vecs[i]
         M = cp_mats[i]
+        print(M.shape, par_mat.shape)
         rocs[i, :, 1] = np.diag(np.dot(M, par_mat))
         for j in range(n_classes):
             weights = np.dot(np.delete(p, j), np.delete(M, j, 0))
@@ -1144,6 +1146,7 @@ def sparsify(col, reshape=True, return_df=True, long_names=False):
     if return_df:
         out = pd.DataFrame(out, columns=columns)
     return out
+<<<<<<< HEAD
 
 
 def otsu(scores, cutpoints, labels, qcut=True):
@@ -1203,3 +1206,6 @@ def cp_mat_summary(b, slim=True, title=None, round=2):
         out.append(df)
     
     return pd.concat(out, axis=1)
+=======
+    
+>>>>>>> a3fec37... fixed reshaping bug in adjust_new

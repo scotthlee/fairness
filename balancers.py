@@ -846,28 +846,29 @@ class MulticlassBalancer:
                                        b_eq=cons_bounds,
                                        method='highs')
   
-        print(self.opt)
+#        print(self.opt)
         y_derived = self.opt.x.reshape([self.n_classes, self.n_classes, self.n_groups])
-        self.m = y_derived
-        print('checking diagonal of W with cp_mats_t')
-        print([self.cp_mats_t[:, i, 0] @ self.m[:, i, 0] for i in range(self.n_classes)])
-        print([self.cp_mats_t[:, i, 1] @ self.m[:, i, 1] for i in range(self.n_classes)])
+        print(y_derived.shape)
+        self.m = y_derived.reshape([self.n_groups, self.n_classes, self.n_classes])
+#        print('checking diagonal of W with cp_mats_t')
+#        print([self.cp_mats_t[:, i, 0] @ self.m[:, i, 0] for i in range(self.n_classes)])
+#        print([self.cp_mats_t[:, i, 1] @ self.m[:, i, 1] for i in range(self.n_classes)])
 #        print([self.cp_mats_t[:, i, 2] @ self.m[:, i, 2] for i in range(self.n_classes)])
 
-        print('checking diagonal of W with cp_mats')
-        print(self.cp_mats[0, 0, :] @ self.m[:, 0, 0])
-        print(self.cp_mats[1, 0, :] @ self.m[:, 0, 1])
+#        print('checking diagonal of W with cp_mats')
+#        print(self.cp_mats[0, 0, :] @ self.m[:, 0, 0])
+#        print(self.cp_mats[1, 0, :] @ self.m[:, 0, 1])
 
-        print('--------------Learned derived predictions-------------')
-        print(self.m[:, :, 0])
-        print(self.m[:, :, 1])
+#        print('--------------Learned derived predictions-------------')
+#        print(self.m[:, :, 0])
+#        print(self.m[:, :, 1])
  #       print(self.m[:, :, 2])
-        print('checking the W matrix')
-        W = np.einsum('ijk, jlk->ilk', self.cp_mats_t.transpose((1, 0, 2)), self.m)
-        print(W[:, :, 0])
-        print(W[:, :, 1])
+#        print('checking the W matrix')
+        W = np.einsum('ijk, jlk->ilk', self.cp_mats_t.transpose((1, 0, 2)),  y_derived)
+#        print(W[:, :, 0])
+#        print(W[:, :, 1])
   #      print(W[:, :, 2])
-        self.rocs = tools.parmat_to_roc(y_derived, self.p_vecs, self.cp_mats)
+        self.rocs = tools.parmat_to_roc(self.m, self.p_vecs, self.cp_mats)
 
         self.con = cons_mat
         self.con_bounds = cons_bounds
@@ -1143,6 +1144,7 @@ class MulticlassBalancer:
                                        A_eq=con,
                                        b_eq=con_bounds,
                                        method='highs')
+                                       
         
         if self.opt.status == 0:
             # Getting the Y~ matrices
