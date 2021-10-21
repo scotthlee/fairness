@@ -1150,6 +1150,10 @@ class MulticlassBalancer:
                                          n_groups=self.n_groups,
                                          n_classes=self.n_classes)
             
+            # Getting the new cp matrices
+            self.new_cp_mats = np.array([np.dot(self.cp_mats[i], self.m[i])
+                                         for i in range(self.n_groups)])
+            
             # Calculating group-specific ROC scores from the new parameters
             self.rocs = tools.parmat_to_roc(self.m,
                                             self.p_vecs,

@@ -410,10 +410,7 @@ def brier_score(true, pred):
         bs = np.sum((pred - true)**2) / true.shape[0]
     else:
         y = onehot_matrix(true)
-        row_diffs = np.diff((pred, y), axis=0)[0]
-        squared_diffs = row_diffs ** 2
-        row_sums = np.sum(squared_diffs, axis=1) 
-        bs = row_sums.mean()
+        bs = np.mean(np.sum((pred - y)**2, axis=1))
     return bs
 
 
@@ -435,22 +432,21 @@ def clf_metrics(true,
         true = true.values
     
     # Figuring out if the guesses are classes or probabilities
-    if np.any([0 < p < 1 for p in pred.flatten()]):
-        preds_are_probs = True
-    else:
-        preds_are_probs = False
+    preds_are_probs = False
+    if type(pred[0]) != type('s'):
+        if np.any([0 < p < 1 for p in pred.flatten()]):
+            preds_are_probs = True
     
     # Optional exit for doing averages with multiclass/label inputs
     if len(np.unique(true)) > 2:
         # Getting binary metrics for each set of results
         codes = np.unique(true)
         
-        # Softmaxing the probabilities if it hasn't already been done
-        if np.sum(pred[0]) > 1:
-            pred = np.array([np.exp(p) / np.sum(np.exp(p)) for p in pred])
-        
         # Argmaxing for when we have probabilities
         if preds_are_probs:
+            if np.sum(pred[0]) > 1:
+                pred = np.array([np.exp(p) / np.sum(np.exp(p)) for p in pred])
+        
             auc = roc_auc_score(true,
                                 pred,
                                 average=average,
@@ -1148,3 +1144,27 @@ def sparsify(col, reshape=True, return_df=True, long_names=False):
     if return_df:
         out = pd.DataFrame(out, columns=columns)
     return out
+
+
+def otsu(scores, cutpoints, labels, qcut=True):
+    if np.min(cutpoints) != 0:
+        cutpoints = [0] + [c for c in cutpoints] + [1]
+    if qcut:
+        cats = np.array(pd.qcut(scores, cutpoints, labels=labels).to_list())
+    else:
+        cats = np.array(pd.cut(scores, cutpoints, labels=labels).to_list())
+    weights = pd.crosstab(cats, 'n').values / len(cats)
+    vars = [np.var(scores[cats == l]) for l in labels]
+    return np.sum(weights * vars)
+
+
+def onehot_matrix(y, sparse=False):
+    if type(y[0]) != type(1):
+        levels = np.unique(y)
+        y = np.array([np.where(levels == l)[0][0] for l in y])
+    if not sparse:
+        y_mat = np.zeros((y.shape[0], len(np.unique(y))))
+        for row, col in enumerate(y):
+            y_mat[row, col] = 1
+    return y_mat.astype(np.uint8)
+
