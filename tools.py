@@ -1173,7 +1173,7 @@ def onehot_matrix(y, sparse=False):
     return y_mat.astype(np.uint8)
 
 
-def cp_mat_summary(b, round=2):
+def cp_mat_summary(b, slim=True, title=None, round=2):
     # Setting up the info
     old = b.cp_mats.round(round)
     new = b.new_cp_mats.round(round)
@@ -1186,12 +1186,20 @@ def cp_mat_summary(b, round=2):
     out = []
     
     # Making the individual dataframes
-    for mats in [old, new]:
+    if not slim:
+        to_write = [old, new]
+    else:
+        to_write = [new]
+    for mats in to_write:
         df = pd.concat([pd.DataFrame(a) for a in mats], axis=0)
         df.columns = df.columns.astype(str)
         df.columns.values[0:n_outcomes] = ['pred ' + o for o in outcomes]
-        df['group'] = group_names 
-        df['outcome'] = outcomes * n_groups
+        if not slim:
+            df['group'] = group_names 
+            df['outcome'] = outcomes * n_groups
+        if title:
+            rows = df.shape[0] - 1
+            df['title'] = [title] + ['']*rows
         out.append(df)
     
     return pd.concat(out, axis=1)
