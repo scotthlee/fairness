@@ -1150,9 +1150,13 @@ def otsu(scores, cutpoints, labels, qcut=True):
     if np.min(cutpoints) != 0:
         cutpoints = [0] + [c for c in cutpoints] + [1]
     if qcut:
-        cats = np.array(pd.qcut(scores, cutpoints, labels=labels).to_list())
+        cats = np.array(pd.qcut(scores, 
+                                cutpoints, 
+                                labels=labels).to_list())
     else:
-        cats = np.array(pd.cut(scores, cutpoints, labels=labels).to_list())
+        cats = np.array(pd.cut(scores, 
+                               cutpoints, 
+                               labels=labels).to_list())
     weights = pd.crosstab(cats, 'n').values / len(cats)
     vars = [np.var(scores[cats == l]) for l in labels]
     return np.sum(weights * vars)
@@ -1167,4 +1171,30 @@ def onehot_matrix(y, sparse=False):
         for row, col in enumerate(y):
             y_mat[row, col] = 1
     return y_mat.astype(np.uint8)
+
+
+def cp_mat_summary(b, round=2):
+    # Setting up the info
+    old = b.cp_mats.round(round)
+    new = b.new_cp_mats.round(round)
+    groups = [g.lower() for g in b.groups]
+    outcomes = [s.lower() for s in b.outcomes]
+    n_groups = len(groups)
+    n_outcomes = len(outcomes)
+    mat_names = ['pre-adjustment', 'post-adjustment']
+    group_names = flatten([[g] + ['']*(n_groups - 1) for g in groups])
+    out = []
+    
+    # Making the individual dataframes
+    for mats in [old, new]:
+        df = pd.concat([pd.DataFrame(a) for a in mats], axis=0)
+        df.columns = df.columns.astype(str)
+        df.columns.values[0:n_outcomes] = ['pred ' + o for o in outcomes]
+        df['group'] = group_names 
+        df['outcome'] = outcomes * n_groups
+        out.append(df)
+    
+    return pd.concat(out, axis=1)
+        
+    
 
