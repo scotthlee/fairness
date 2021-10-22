@@ -1209,11 +1209,15 @@ class MulticlassBalancer:
              shade_hull=True,
              chance_line=True,
              palette='colorblind',
+             title=None,
              tight=False,
              style='white',
              xlim=(0, 1),
              ylim=(0, 1),
-             alpha=0.5):
+             alpha=0.5,
+             show=True,
+             save=False,
+             img_dir=''):
         """Generates a variety of plots for the PredictionBalancer.
         
         Parameters
@@ -1279,6 +1283,9 @@ class MulticlassBalancer:
                          palette=palette)
         rp.fig.set_tight_layout(tight)
         rp.set(xlim=xlim, ylim=ylim)
+        
+        if title:
+            rp.fig.suptitle(title)
         
         # Plotting the adjusted coordinates
         if preds:
@@ -1393,7 +1400,14 @@ class MulticlassBalancer:
             [ax.plot((0, 1), (0, 1), color='lightgray') 
              for ax in rp.axes[0]]
         
-        plt.show()
+        if show:
+            plt.show()
+        
+        if save:
+            if not title:
+                title = 'figure'
+            plt.savefig(img_dir + title + '.png')
+            plt.close()
     
     def summary(self, org=True, adj=True, round=4):
         """Prints a summary with FPRs and TPRs for each group.
