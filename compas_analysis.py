@@ -27,7 +27,6 @@ gap = (compas.end - compas.start).values
 race = compas.race.values
 
 # Whether or not to include non-recidivists in the analysis
-USE_RECID = True
 no_recid = np.where(compas.event == 0)[0]
 recid = np.where(compas.event == 1)[0]
 
@@ -94,25 +93,29 @@ plt.show()
 risk_cat = np.array(['Low'] * gap.shape[0], dtype='<U10')
 risk_cat[recid] = gap_cut
 
-# And balancing the cp scores against the RF
-b = balancers.MulticlassBalancer(np.array([p for p in risk_cat]), 
-                                 np.array([s for s in score_text]), 
-                                 race)
+# Balancing the predictions
+setups = [
+    ['odds', 'macro'], ['odds', 'micro'],
+    ['strict', 'macro'], ['strict', 'micro'],
+    ['opportunity', 'macro'], ['opportunity', 'micro']
+]
 
-# Odds with macro loss
-b.adjust(goal='odds', loss='macro')
-b.summary()
-b.plot(tight=True)
+tables = []
 
-# Equalized odds with micro loss
-b.adjust(goal='odds', loss='micro')
-b.summary()
-b.plot(tight=True)
+b = balancers.MulticlassBalancer(risk_cat, score_text.values, race)
+for i, setup in enumerate(setups):
+    title = setup[0] + ' goal with ' + setup[1] + ' loss'
+    b.adjust(goal=setup[0], loss=setup[1])
+    b.plot(title=title, 
+           tight=True, 
+           show=False,
+           save=True,
+           img_dir='img/compas/')
+    tables.append(tools.cp_mat_summary(b,
+                                     title=title,
+                                     slim=(i>0)))
 
-# Strict goal with macro loss
-b.adjust(goal='strict', loss='macro')
-b.summary()
-b.plot(tight=True)
+pd.concat(tables, axis=1).to_csv('data/compas_day_tables.csv', index=False)
 
 '''Part 2: Risk stuff with COMPAS'''
 # Setting up the data again, only this time with non-recidivists included
