@@ -19,16 +19,17 @@ risk_levels = ['High', 'Medium', 'Low']
 races = ['African-American', 'Caucasian', 'Hispanic']
 compas = compas_full[(compas_full.end - compas_full.start >= 0) &
                 ([s in risk_levels for s in compas_full.score_text]) &
-                ([s in races for s in compas_full.race]) &
-                (compas_full.event == 1)]
+                ([s in races for s in compas_full.race])]
 compas = compas.reset_index(drop=True)
 score_text = compas.score_text.astype('category')
 score_text = score_text.cat.reorder_categories(risk_levels)
 gap = (compas.end - compas.start).values
+race = compas.race.values
 
-# Combining gap info with recidivism info
-#no_recid = np.where(compas.event == 0)[0]
-#recid = np.where(compas.event == 1)[0]
+# Whether or not to include non-recidivists in the analysis
+USE_RECID = True
+no_recid = np.where(compas.event == 0)[0]
+recid = np.where(compas.event == 1)[0]
 
 # Using Otsu thresholding to pick risk levels based on time to crime
 p_range = np.arange(0.01, 1, .01)
@@ -37,7 +38,7 @@ good = np.where(np.diff(p_combos)>= .2)[0]
 good_combos = [p_combos[i] for i in good]
 
 with Pool() as p:
-    input = [(gap, c, risk_levels) for c in good_combos]
+    input = [(gap[recid], c, risk_levels) for c in good_combos]
     res = p.starmap(tools.otsu, input)
     p.close()
     p.join()
@@ -46,15 +47,16 @@ with Pool() as p:
 best_cut = [p for p in good_combos[np.argmin(res)]]
 
 # Thresholding the times to crime with the best cutoffs
-gap_cut = pd.qcut(x=gap, 
+gap_cut = pd.qcut(x=gap[recid],
                  q=[0] + best_cut + [1],
                  labels=risk_levels).to_list()
 gap_cut = np.array(gap_cut)
 
 # Making a tall version for visualization
-gap_df = pd.DataFrame(zip(gap_cut, gap), 
+gap_df = pd.DataFrame(zip(gap_cut, gap[recid]), 
                         columns=['otsu', 'days'])
-gap_df['compas'] = score_text
+gap_df['compas'] = score_text[recid]
+gap_df['race'] = race[recid]
 
 # Making a few basic density plots
 sns.set_style('darkgrid')
@@ -68,9 +70,10 @@ for i, r in enumerate(races):
                       data=gap_df[compas.race == r],
                       hue=measure,
                       ax=ax[i, j],
+                      hue_order=risk_levels,
                       multiple='stack')
         ax[i, j].set_ylabel(r)
-  
+
 fig.suptitle('Days to recidivism')
 plt.show()
 
@@ -81,53 +84,39 @@ for i, measure in enumerate(['otsu', 'compas']):
                   data=gap_df,
                   hue=measure,
                   ax=ax[i],
+                  hue_order=risk_levels,
                   multiple='stack')
+
 fig.suptitle('Days to recidivism')
 plt.show()
 
-'''
-# Using a random forest for balancing because compas sucks
-race = compas.race.values
-cat_cols = ['sex', 'race']
-num_cols = ['age', 'juv_fel_count', 'juv_misd_count',
-            'priors_count', 'is_recid']
-cat_sparse = pd.concat([tools.sparsify(compas[c],
-                                       long_names=True)
-                        for c in cat_cols], axis=1)
-X = pd.concat([cat_sparse, 
-               compas[num_cols]], 
-              axis=1).values
-y = gap_cut
-rf = RandomForestClassifier(n_jobs=-1, 
-                            n_estimators=1000, 
-                            oob_score=True)
-rf.fit(X, y)
-probs = rf.oob_decision_function_
-preds = np.array([risk_levels[i] for i in np.argmax(probs, axis=1)])
-'''
+# Rolling the recidivists back in with the non-recidivists
+risk_cat = np.array(['Low'] * gap.shape[0], dtype='<U10')
+risk_cat[recid] = gap_cut
 
 # And balancing the cp scores against the RF
-b = balancers.MulticlassBalancer(np.array([p for p in y]), 
+b = balancers.MulticlassBalancer(np.array([p for p in risk_cat]), 
                                  np.array([s for s in score_text]), 
                                  race)
 
 # Odds with macro loss
 b.adjust(goal='odds', loss='macro')
 b.summary()
-b.plot()
+b.plot(tight=True)
 
 # Equalized odds with micro loss
 b.adjust(goal='odds', loss='micro')
 b.summary()
-b.plot()
+b.plot(tight=True)
 
 # Strict goal with macro loss
 b.adjust(goal='strict', loss='macro')
 b.summary()
-b.plot()
+b.plot(tight=True)
 
 '''Part 2: Risk stuff with COMPAS'''
 # Setting up the data again, only this time with non-recidivists included
+compas_full = pd.read_csv('~/code/compas-analysis/compas-scores-two-years.csv')
 compas = compas_full[(compas_full.end - compas_full.start >= 0) &
                 ([s in risk_levels for s in compas_full.score_text]) &
                 ([s in races for s in compas_full.race])]
@@ -146,7 +135,7 @@ cat_sparse = pd.concat([tools.sparsify(compas[c],
 X = pd.concat([cat_sparse, 
                compas[num_cols]], 
               axis=1).values
-y = compas.event.values
+y = compas.two_year_recid.values
 
 # Training a random forest to predict 2-year recidivism
 rf = RandomForestClassifier(n_jobs=-1, 
@@ -176,6 +165,7 @@ for i, r in enumerate(races):
                     ax=ax[i, j],
                     fill=True)
         ax[i, j].set_ylabel(r)
+        ax[i, j].set_xlim(0, 1)
 
 fig.suptitle('Probability of 2-year recidivism')
 plt.show()
@@ -187,7 +177,7 @@ for i, measure in enumerate(['rf', 'compas']):
                 data=prob_df,
                 hue='event',
                 ax=ax[i],
-                multiple='stack')
+                fill=True)
 
 fig.suptitle('Probability of 2-year recidivism')
 plt.show()
