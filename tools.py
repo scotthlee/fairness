@@ -433,7 +433,7 @@ def clf_metrics(true,
     
     # Figuring out if the guesses are classes or probabilities
     preds_are_probs = False
-    if type(pred[0]) != type('s'):
+    if 'float' in [pred.dtype]:
         if np.any([0 < p < 1 for p in pred.flatten()]):
             preds_are_probs = True
     
@@ -1182,7 +1182,7 @@ def cp_mat_summary(b, round=2):
     n_groups = len(groups)
     n_outcomes = len(outcomes)
     mat_names = ['pre-adjustment', 'post-adjustment']
-    group_names = flatten([[g] + ['']*(n_groups - 1) for g in groups])
+    group_names = flatten([[g] + ['']*(n_outcomes - 1) for g in groups])
     out = []
     
     # Making the individual dataframes
@@ -1195,6 +1195,3 @@ def cp_mat_summary(b, round=2):
         out.append(df)
     
     return pd.concat(out, axis=1)
-        
-    
-
