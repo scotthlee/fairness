@@ -127,6 +127,7 @@ for i, df in enumerate(fds):
 
 # Making a df for plotting
 all_fds = pd.concat(fds, axis=0)
+all_fds.to_csv('data/cannabis_fds.csv', index=False)
 micros = ['micro' in s for s in all_fds.setup]
 
 sns.lineplot(x='slack',
@@ -232,7 +233,7 @@ for i, setup in enumerate(setups):
            tight=True, 
            show=False,
            save=True,
-           img_dir='img/weed/')
+           img_dir='img/obesity/')
     tables.append(tools.cp_mat_summary(b,
                                        title=title,
                                        slim=(i>0)))
@@ -253,10 +254,11 @@ for i, df in enumerate(fds):
 
 # Making a df for plotting
 all_fds = pd.concat(fds, axis=0)
+all_fds.to_csv('data/obesity_fds.csv', index=False)
 micros = ['micro' in s for s in all_fds.setup]
 
 sns.lineplot(x='slack',
              y='micro_loss',
              hue='setup',
-             data=all_fds[micros])
+             data=all_fds)
 plt.show()
