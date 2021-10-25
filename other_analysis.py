@@ -92,25 +92,48 @@ plt.show()
 setups = [
     ['odds', 'macro'], ['odds', 'micro'],
     ['strict', 'macro'], ['strict', 'micro'],
-    ['opportunity', 'macro'], ['opportunity', 'micro']
+    ['opportunity', 'macro'], ['opportunity', 'micro'],
+    ['demographic_parity', 'macro'], ['demographic_parity', 'micro']
 ]
 
 tables = []
+fds = []
 
 b = balancers.MulticlassBalancer(y, preds, race)
 for i, setup in enumerate(setups):
-    title = setup[0] + ' goal with ' + setup[1] + ' loss'
-    b.adjust(goal=setup[0], loss=setup[1])
+    goal, loss = setup[0], setup[1]
+    title = goal + ' goal with ' + loss + ' loss'
+    b.adjust_new(goal=goal, loss=loss)
     b.plot(title=title, 
            tight=True, 
            show=False,
            save=True,
            img_dir='img/weed/')
     tables.append(tools.cp_mat_summary(b,
-                                     title=title,
-                                     slim=(i>0)))
+                                       title=title,
+                                       slim=(i>0)))
+    fds.append(tools.fd_grid(b,
+                             loss=loss,
+                             goal=goal,
+                             step=.001,
+                             max=.15))
 
 pd.concat(tables, axis=1).to_csv('weed tables.csv', index=False)
+
+# Making the fairness-discrimination plot
+for i, df in enumerate(fds):
+    setup = setups[i][0] + ' ' + setups[i][1]
+    df['setup'] = [setup] * df.shape[0]
+
+# Making a df for plotting
+all_fds = pd.concat(fds, axis=0)
+micros = ['micro' in s for s in all_fds.setup]
+
+sns.lineplot(x='slack',
+             y='micro_loss',
+             hue='setup',
+             data=all_fds[micros])
+plt.show()
 
 '''Part 2: Obesity data'''
 # Iporting the data
@@ -197,27 +220,43 @@ for i, g in enumerate(genders):
 fig.suptitle('Predicted probability of weight category use by gender')
 plt.show()
 
-# Balancing the predictions
-setups = [
-    ['odds', 'macro'], ['odds', 'micro'],
-    ['strict', 'macro'], ['strict', 'micro'],
-    ['opportunity', 'macro'], ['opportunity', 'micro']
-]
-
 tables = []
+fds = []
 
 b = balancers.MulticlassBalancer(y, preds, gender)
 for i, setup in enumerate(setups):
-    title = setup[0] + ' goal with ' + setup[1] + ' loss'
-    b.adjust(goal=setup[0], loss=setup[1])
+    goal, loss = setup[0], setup[1]
+    title = goal + ' goal with ' + loss + ' loss'
+    b.adjust_new(goal=goal, loss=loss)
     b.plot(title=title, 
            tight=True, 
            show=False,
            save=True,
-           img_dir='img/obesity/')
+           img_dir='img/weed/')
     tables.append(tools.cp_mat_summary(b,
-                                     title=title,
-                                     slim=(i>0)))
+                                       title=title,
+                                       slim=(i>0)))
+    
+    fds.append(tools.fd_grid(b,
+                             loss=loss,
+                             goal=goal,
+                             step=.001,
+                             max=.15))
 
-pd.concat(tables, axis=1).to_csv('obesity tables.csv', index=False)
+pd.concat(tables, axis=1).to_csv('data/obesity tables.csv', 
+                                 index=False)
 
+# Making the fairness-discrimination plot
+for i, df in enumerate(fds):
+    setup = setups[i][0] + ' ' + setups[i][1]
+    df['setup'] = [setup] * df.shape[0]
+
+# Making a df for plotting
+all_fds = pd.concat(fds, axis=0)
+micros = ['micro' in s for s in all_fds.setup]
+
+sns.lineplot(x='slack',
+             y='micro_loss',
+             hue='setup',
+             data=all_fds[micros])
+plt.show()

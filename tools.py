@@ -1206,3 +1206,25 @@ def cp_mat_summary(b, slim=True, title=None, round=2):
         out.append(df)
     
     return pd.concat(out, axis=1)
+
+
+def fd_grid(b,
+            loss='micro',
+            goal='odds',
+            step=0.1,
+            max=1.0):
+    '''Returns a grid of slack-vs.-loss metrics for making F-D plots'''
+    micro_losses = []
+    macro_losses = []
+    slacks = np.arange(0, max + step, step)
+    for s in slacks:
+        b.adjust_new(goal=goal, loss=loss, slack=s)
+        micro_losses.append(b.loss)
+        macro_losses.append(b.macro_loss)
+    
+    out = pd.DataFrame([slacks, 
+                        micro_losses, 
+                        macro_losses]).transpose()
+    out.columns = ['slack', 'micro_loss', 'macro_loss']
+    return out
+    
