@@ -802,7 +802,7 @@ class MulticlassBalancer:
         # n_classes (y~) by n_classes (y^) by n_groups matrix of
         # constraints, adding in additional constraints as needed 
         # to the first dim
-        
+        self.goal = goal
         if goal == 'odds':
             cons_mat = self.get_equal_odds_constraints()
         elif goal == 'opportunity':
@@ -854,12 +854,12 @@ class MulticlassBalancer:
             y_derived = self.opt.x.reshape([self.n_classes, 
                                             self.n_classes, 
                                             self.n_groups])
+            self.y_d = y_derived
             W = np.einsum('ijk, jlk->ilk', 
                           self.cp_mats_t.transpose((1, 0, 2)),  
                           y_derived)
-            self.m = y_derived.reshape([self.n_groups, 
-                                        self.n_classes, 
-                                        self.n_classes])
+            self.m = np.array([y_derived[:, :, i] 
+                               for i in range(self.n_groups)])
             
             # Getting the new cp matrices
             self.new_cp_mats = np.array([np.dot(self.cp_mats[i], self.m[i])
@@ -877,11 +877,7 @@ class MulticlassBalancer:
             self.rocs = np.nan
             self.loss = np.nan
             self.macro_loss = np.nan
-            
-        if summary:
-            self.summary(org=False)
-    
-
+        
         if summary:
             self.summary(org=False)
             
@@ -1388,6 +1384,13 @@ class MulticlassBalancer:
                 print('.adjust() must be called before optimum can be shown.')
                 pass
             
+            roc_arrs = [np.array([a[i, :] for a in self.rocs])
+                        for i in range(self.n_classes)]
+            roc_dfs = [pd.DataFrame(a, columns=['fpr', 'tpr'])
+                       for a in roc_arrs]
+            for df in roc_dfs:
+                df['group'] = self.groups
+            
             for i, ax in enumerate(rp.axes[0]):
                 if ('odds' in self.goal) | ('strict' in self.goal):
                     ax.scatter(self.rocs[0, i, 0],
@@ -1395,16 +1398,18 @@ class MulticlassBalancer:
                                marker='x',
                                color='black')
                 
-                elif 'opportunity' in self.goal:
-                    ax.hlines(self.rocs[0, i, 1],
+                else:
+                    '''ax.hlines(self.rocs[0, i, 1],
                               xmin=0,
                               xmax=1,
                               color='black',
                               linestyles='--',
-                              linewidths=0.5)
-                
-                elif 'parity' in self.goal:
-                    pass
+                              linewidths=0.5)'''
+                    ax.scatter(x=roc_dfs[i].fpr,
+                               y=roc_dfs[i].tpr,
+                               color=cmap[i],
+                               marker='x',
+                               s=30)
         
         # Optionally adding the chance line
         if chance_line:
