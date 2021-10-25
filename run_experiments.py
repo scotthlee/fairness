@@ -16,7 +16,11 @@ outcomes = ['yes', 'no', 'maybe']
 groups2 = ['a', 'b']
 groups3 = ['a', 'b', 'c']
 losses = ['micro', 'macro']
-goals = ['odds', 'opportunity', 'strict']
+goals = [
+    'odds', 'opportunity', 'strict',
+    'demographic_parity', 'positive_predictive_parity',
+    'strict_predictive_parity'
+]
 
 # Setting up the combinations of situations
 bias_types = ['low', 'medium', 'high']
