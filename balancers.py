@@ -1212,6 +1212,7 @@ class MulticlassBalancer:
              s2=50,
              preds=False,
              optimum=True,
+             separate_optima=False,
              lp_lines='all', 
              shade_hull=True,
              chance_line=True,
@@ -1239,6 +1240,9 @@ class MulticlassBalancer:
         
         optimum : bool, default True
             Whether to plot the theoretical optima for the predictions.
+        
+        separate_optima : bool, default False
+            Whether to plot separate optima for each group.
         
         lp_lines : {'upper', 'all'}, default 'all'
             Whether to plot the convex hulls solved by the linear program.
@@ -1392,7 +1396,8 @@ class MulticlassBalancer:
                 df['group'] = self.groups
             
             for i, ax in enumerate(rp.axes[0]):
-                if ('odds' in self.goal) | ('strict' in self.goal):
+                if ((('odds' in self.goal) | ('strict' in self.goal)) and
+                    not separate_optima):
                     ax.scatter(self.rocs[0, i, 0],
                                self.rocs[0, i, 1],
                                marker='x',
