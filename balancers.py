@@ -751,6 +751,7 @@ class MulticlassBalancer:
                goal='odds',
                loss='micro',
                round=4,
+               slack=0,
                return_optima=False,
                summary=False,
                binom=False):
@@ -830,24 +831,53 @@ class MulticlassBalancer:
             g = con_idx // int(self.n_classes)
             cons_norm[con_idx, c, :, g] = np.ones(self.n_classes)
         cons_norm = cons_norm.reshape(cons_norm.shape[0], -1)
-        cons_mat = np.concatenate([cons_mat, cons_norm], axis=0)            
+#        cons_mat = np.concatenate([cons_mat, cons_norm], axis=0)            
         #print(cons_mat)
             
 
         # Form the bounds of the constraints:
         #    For odds/opp/strict these are 0 since they are equalities.
         #    For the normalization constraints these are 1
-        cons_bounds = np.zeros(cons_mat.shape[0])
-        cons_bounds[-cons_norm.shape[0]:] = 1
+#        cons_bounds = np.zeros(cons_mat.shape[0])
+#        cons_bounds = np.ones(cons_mat.shape[0]) * slack
+#        cons_bounds[-cons_norm.shape[0]:] = 1 # moved to inside slack if/else statement
 
-        self.opt = sp.optimize.linprog(c=loss_coefs,
+        if slack == 0:
+            # all constraints are equality constraints only
+            cons_mat = np.concatenate([cons_mat, cons_norm], axis=0)            
+            cons_bounds = np.ones(cons_mat.shape[0]) * slack
+            cons_bounds[-cons_norm.shape[0]:] = 1
+            self.opt = sp.optimize.linprog(c=loss_coefs,
                                        bounds=[0, 1],
                                        A_eq=cons_mat,
-                                       b_eq=cons_bounds,
-                                       method='highs')
-        
-        self.con = cons_mat
-        self.con_bounds = cons_bounds
+                                       b_eq=cons_bounds)
+                                       #method='highs')
+            self.con_bounds = cons_bounds
+            self.cons = cons_mat
+        else:
+            # constraints for normalization are still equality, but
+            # constraints for equality across groups are relaxed (small inequalities allowed)
+            cons_norm_bounds = np.ones(cons_norm.shape[0]) 
+
+            # Have to account for abs value of the difference being within slack
+            # by adding a second set of constraints. AX < slack represents ax - bx < slack
+            # -AX < slack represents ax - bx > -slack
+            cons_ineq_bounds = np.ones(2 * cons_mat.shape[0]) * slack
+            abs_val_cons = np.concatenate([cons_mat, -cons_mat], axis=0)
+            self.opt = sp.optimize.linprog(c=loss_coefs,
+                                       bounds=[0, 1],
+                                       A_eq=cons_norm,
+                                       b_eq=cons_norm_bounds,
+                                       A_ub=abs_val_cons,
+                                       b_ub=cons_ineq_bounds)
+                                       #method='highs')
+            # tbh not sure if any of this really makes sense to do sense the
+            # attributes will vary based on the inputs-does anything actually
+            # need to access the bounds after running?
+            self.con_bounds = cons_norm_bounds
+            self.con_ineq_bounds = cons_ineq_bounds
+            self.con = abs_val_cons
+            self.con_norm = cons_norm_bounds
         
         if self.opt.status == 0:
             # Reshaping the solution
@@ -869,8 +899,8 @@ class MulticlassBalancer:
             self.rocs = tools.parmat_to_roc(self.m,
                                             self.p_vecs,
                                             self.cp_mats)
-            self.loss = 1 - np.sum(self.p_y * self.rocs[0, :, 1])
-            self.macro_loss = 1 - np.mean(self.rocs[0, :, 1])
+            self.loss = 1 - np.sum(self.p_vecs * self.rocs[:, :, 1])
+            self.macro_loss = 1 - np.mean(self.rocs[:, :, 1])
         else:
             print('\nBalancing failed: Linear program is infeasible.\n')
             self.m = np.nan
@@ -1165,8 +1195,8 @@ class MulticlassBalancer:
             self.rocs = tools.parmat_to_roc(self.m,
                                             self.p_vecs,
                                             self.cp_mats)
-            self.loss = 1 - np.sum(self.p_y * self.rocs[0, :, 1])
-            self.macro_loss = 1 - np.mean(self.rocs[0, :, 1])
+            self.loss = 1 - np.sum(self.p_vecs * self.rocs[:, :, 1])
+            self.macro_loss = 1 - np.mean(self.rocs[:, :, 1])
         else:
             print('\nBalancing failed: Linear program is infeasible.\n')
             self.rocs = np.nan
