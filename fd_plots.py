@@ -1,3 +1,4 @@
+'''Produces the fairness-discrimination plots'''
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -9,16 +10,19 @@ import balancers
 
 
 # Reading in the original datasets
-weed = pd.read_csv('data/drugs.csv')
-obesity = pd.read_csv('data/obesity.csv')
-compas = pd.read_csv('data/compas.csv')
+bar = pd.read_csv('data/source/bar.csv')
+weed = pd.read_csv('data/source/drugs.csv')
+obesity = pd.read_csv('data/source/obesity.csv')
+compas = pd.read_csv('data/source/compas.csv')
 
 # Reading in the individual fairness-discrimination grids
-obesity_fds = pd.read_csv('data/obesity_fds.csv')
-compas_fds = pd.read_csv('data/compas_fds.csv')
-weed_fds = pd.read_csv('data/cannabis_fds.csv')
-dfs = [compas_fds, weed_fds, obesity_fds]
-df_names = ['compas', 'cannabis', 'obesity']
+bar_fds = pd.read_csv('data/fd_grids/bar.csv')
+obesity_fds = pd.read_csv('data/fd_grids/obesity_fds.csv')
+compas_fds = pd.read_csv('data/fd_grids/compas_fds.csv')
+weed_fds = pd.read_csv('data/fd_grids/cannabis_fds.csv')
+
+dfs = [compas_fds, weed_fds, obesity_fds, bar_fds]
+df_names = ['compas', 'cannabis', 'obesity', 'bar']
 
 # Stacking everything to feed to relpot
 for i, df in enumerate(dfs):
@@ -49,5 +53,5 @@ for i, loss in enumerate(losses):
                title=df_names[i])
     
     fig.suptitle(loss + ' loss as a function of slack')
-    #fig.set_tight_layout(True)
+    fig.set_tight_layout(True)
     plt.show()

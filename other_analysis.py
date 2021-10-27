@@ -1,3 +1,4 @@
+'''Runs analysis for real datasets other than COMPAS'''
 import numpy as np
 import pandas as pd
 import seaborn as sns
