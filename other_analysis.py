@@ -363,3 +363,139 @@ for i, r in enumerate(np.unique(white)):
 
 fig.suptitle('Predicted probability of bar passage by race')
 plt.show()
+
+'''Parkinson's data'''
+park = pd.read_csv('data/source/park.csv')
+sex = np.array(['female' if s == 1 else 'male' 
+                for s in park.sex.values])
+score = park.total_UPDRS.values
+risk_levels = ['Mild', 'Moderate', 'Severe']
+
+groups = np.unique(sex)
+n_groups = len(groups)
+n_classes = len(risk_levels)
+
+# Using Otsu thresholding to pick risk levels based on UPDRS score
+if 'score_cut' not in park.columns.values:
+    p_range = np.arange(0.01, 1, .01)
+    p_combos = [c for c in combinations(p_range, 2)]
+    good = np.where(np.diff(p_combos)>= .2)[0]
+    good_combos = [p_combos[i] for i in good]
+    
+    with Pool() as p:
+        input = [(score, c, risk_levels) for c in good_combos]
+        res = p.starmap(tools.otsu, input)
+        p.close()
+        p.join()
+        
+    # Selecting the cutoff that yielded the lowest intraclass variance
+    best_cut = [p for p in good_combos[np.argmin(res)]]
+    
+    # Thresholding the times to crime with the best cutoffs
+    score_cut = pd.qcut(x=score,
+                      q=[0] + best_cut + [1],
+                      labels=risk_levels).to_list()
+    score_cut = np.array(score_cut)
+    park['score_cut'] = score_cut
+    park.to_csv('data/source/park.csv', index=False)
+
+# Making a tall version for visualization
+score_df = pd.DataFrame(zip(score_cut, score), 
+                        columns=['dik', 'days'])
+score_df['sex'] = sex
+
+n_classes = len(pass_classes)
+n_groups = len(races)
+
+# Making a sparse matrix of predictors for the random forest
+X = park.drop(['subject#',
+               'motor_UPDRS', 
+               'total_UPDRS',
+               'score_cut'], axis=1)
+y = park.score_cut.values
+
+# Running the random forest
+rf = RandomForestClassifier(n_jobs=-1, 
+                            n_estimators=1000, 
+                            oob_score=True,
+                            class_weight='balanced')
+rf.fit(X, y)
+probs = rf.oob_decision_function_
+prob_args = np.argmax(probs, axis=1)
+preds = np.array([risk_levels[i] for i in prob_args])
+bin_preds = [np.array([preds == p], dtype=np.uint8) 
+             for p in risk_levels]
+
+# Getting some basic stats
+rf_stats = tools.clf_metrics(y, preds)
+
+tables = []
+fds = []
+
+# Running the balancing loop
+b = balancers.MulticlassBalancer(y, preds, sex)
+for i, setup in enumerate(setups):
+    goal, loss = setup[0], setup[1]
+    title = goal + ' goal with ' + loss + ' loss'
+    b.adjust_new(goal=goal, loss=loss)
+    b.plot(title=title, 
+           tight=True, 
+           show=False,
+           save=True,
+           img_dir='img/park/')
+    tables.append(tools.cp_mat_summary(b,
+                                       title=title,
+                                       slim=(i>0)))
+    
+    fds.append(tools.fd_grid(b,
+                             loss=loss,
+                             goal=goal,
+                             step=.001,
+                             max=.15))
+
+# Making the fairness-discrimination plot
+for i, df in enumerate(fds):
+    setup = setups[i][0] + ' ' + setups[i][1]
+    df['setup'] = [setup] * df.shape[0]
+
+# Making a df for plotting
+all_fds = pd.concat(fds, axis=0)
+all_fds.to_csv('data/fd_grids/park.csv', index=False)
+
+# Doing the plots
+fig, ax = plt.subplots(nrows=1, 
+                       ncols=n_classes,
+                       sharey=True)
+for i, p in enumerate(risk_levels):
+    sns.kdeplot(x=probs[:, i],
+                hue=np.array(preds == p, dtype=np.uint8),
+                ax=ax[i],
+                fill=True)
+    ax[i].set_xlabel(p)
+    ax[i].set_ylabel('')
+
+fig.suptitle('Predicted probability of PD stage')
+fig.set_tight_layout(True)
+plt.show()
+
+# And then by race
+fig, ax = plt.subplots(2, 
+                       n_classes, 
+                       sharey=True, 
+                       sharex=True)
+for i, s in enumerate(groups):
+    ids = np.where(sex == s)[0]
+    for j, p in enumerate(risk_levels):
+        sns.kdeplot(x=probs[ids, j],
+                    hue=bin_preds[j][0][ids],
+                    ax=ax[i, j],
+                    fill=True)
+        ax[i, j].set_ylabel(g)
+        ax[i, j].set_xlabel(p)
+
+fig.suptitle('Predicted probability of PD stage by sex')
+fig.set_tight_layout(True)
+plt.show()
+
+
+
