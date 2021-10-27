@@ -80,7 +80,6 @@ mm_tpr_tabs = pd.concat(
 mm_tpr_tabs.columns = ['coef', 'lower', 'upper']
 mm_tpr_tabs.to_csv(stats_dir + 'mm_tpr_stats.csv')
 
-
 mx_f = 'max_mean_tpr_diff ~ loss + goal + class_balance + group_balance'
 mx_tpr_mod2 = smf.ols(mx_f, data=exp2)
 mx_tpr_res2 = mx_tpr_mod2.fit()
