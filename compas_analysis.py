@@ -97,15 +97,19 @@ risk_cat[recid] = gap_cut
 setups = [
     ['odds', 'macro'], ['odds', 'micro'],
     ['strict', 'macro'], ['strict', 'micro'],
-    ['opportunity', 'macro'], ['opportunity', 'micro']
+    ['opportunity', 'macro'], ['opportunity', 'micro'],
+    ['demographic_parity', 'macro'], ['demographic_parity', 'micro']
 ]
 
 tables = []
+fds = []
 
 b = balancers.MulticlassBalancer(risk_cat, score_text.values, race)
 for i, setup in enumerate(setups):
-    title = setup[0] + ' goal with ' + setup[1] + ' loss'
-    b.adjust(goal=setup[0], loss=setup[1])
+    loss = setup[1]
+    goal = setup[0]
+    title = goal + ' goal with ' + loss + ' loss'
+    b.adjust_new(goal=goal, loss=loss)
     b.plot(title=title, 
            tight=True, 
            show=False,
@@ -114,6 +118,20 @@ for i, setup in enumerate(setups):
     tables.append(tools.cp_mat_summary(b,
                                      title=title,
                                      slim=(i>0)))
+    fds.append(tools.fd_grid(b,
+                             loss=loss,
+                             goal=goal,
+                             step=.001,
+                             max=.2))
+
+# Combining the FD grids and exporting for plotting later on
+for i, df in enumerate(fds):
+    setup = setups[i][0] + ' ' + setups[i][1]
+    df['setup'] = [setup] * df.shape[0]
+
+all_fds = pd.concat(fds, axis=0)
+all_fds.to_csv('data/compas_fds.csv', index=False)
+
 
 pd.concat(tables, axis=1).to_csv('data/compas_day_tables.csv', index=False)
 

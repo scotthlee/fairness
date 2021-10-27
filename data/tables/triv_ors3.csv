@@ -1,0 +1,14 @@
+setup,OR
+loss.micro,253.52
+loss.macro,0.0
+goal.odds,0.62
+goal.opportunity,1.19
+goal.strict,1.3
+class_balance.balanced,0.0
+class_balance.one_rare,0.87
+class_balance.two_rare,7.96
+group_balance.no_minority,0.86
+group_balance.one_slight_minority,1.1
+group_balance.one_strong_minority,0.98
+group_balance.two_slight_minorities,1.1
+group_balance.two_strong_minorities,0.98
