@@ -170,6 +170,59 @@ def test_run(outcomes,
     return out
 
 
+def balancing_stats(b):
+    # Running the optimizations
+    status = b.opt.status
+    old_acc = np.dot(b.p_y, np.diag(b.cp_mat))
+    if status == 0:
+        # Getting loss and other basic metrics
+        new_acc = 1 - b.loss
+        acc_diff = (new_acc - old_acc) / old_acc
+        new_rocs = b.rocs
+        old_rocs = np.array([cpmat_to_roc(b.p_vecs[i],
+                                          b.cp_mats[i])
+                             for i in range(len(b.cp_mats))])
+        
+        # Getting tpr-specific metrics
+        old_tprs = np.array([np.diag(a) 
+                             for a in b.cp_mats]).flatten()
+        new_tprs = np.array([np.diag(a) 
+                             for a in b.new_cp_mats]).flatten()
+        new_mean = new_tprs.mean()
+        old_mean = old_tprs.mean()
+        mean_diff = new_mean - old_mean
+        rel_mean_diff = mean_diff / old_mean
+        diffs = new_tprs - old_tprs
+        max_diff = diffs[np.argmax(np.abs(diffs))]
+        rel_max_diff = max_diff / old_tprs[np.argmax(np.abs(diffs))]
+        
+        # Getting metrics for Youden's J
+        old_j = (1 - old_rocs[:, :, 0]) + old_rocs[:, :, 1] - 1
+        new_j = (1 - new_rocs[:, :, 0]) + new_rocs[:, :, 1] - 1
+        j_diffs = new_j - old_j
+        j_diff_means = j_diffs.mean(axis=1)
+        mn_mn_diff_j = j_diff_means.mean()
+        mx_mn_diff_j = j_diff_means[np.argmax(np.abs(j_diff_means))]
+        mx_j_diff = j_diffs.flatten()[np.argmax(np.abs(j_diffs.flatten()))]
+        
+        if np.any(np.sum(new_rocs, axis=2) == 0):
+            trivial = 1
+            if np.any(np.mean(new_rocs, axis=2) == 1):
+                trivial = 2
+        else:
+            trivial = 0
+    
+    # Bundling things up
+    out_df = pd.DataFrame([old_acc, new_acc,
+                           acc_diff, old_mean, new_mean, 
+                           mean_diff, rel_mean_diff, max_diff,
+                           rel_max_diff]).transpose()
+    out_df.columns = ['old_acc', 'new_acc', 'acc_diff', 
+                      'old_mean_tpr', 'new_mean_tpr', 'mean_tpr_diff', 
+                      'rel_mean_tpr_diff', 'max_tpr_diff', 'rel_max_tpr_diff']
+    
+    return out_df
+
 def simulate_y(y_levels,
                a_levels,
                p_a,

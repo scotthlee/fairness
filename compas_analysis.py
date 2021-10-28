@@ -57,6 +57,53 @@ gap_df = pd.DataFrame(zip(gap_cut, gap[recid]),
 gap_df['compas'] = score_text[recid]
 gap_df['race'] = race[recid]
 
+# Rolling the recidivists back in with the non-recidivists
+risk_cat = np.array(['Low'] * gap.shape[0], dtype='<U10')
+risk_cat[recid] = gap_cut
+
+# Balancing the predictions
+setups = [
+    ['odds', 'macro'], ['odds', 'micro'],
+    ['strict', 'macro'], ['strict', 'micro'],
+    ['opportunity', 'macro'], ['opportunity', 'micro'],
+    ['demographic_parity', 'macro'], ['demographic_parity', 'micro']
+]
+
+tables = []
+fds = []
+
+b = balancers.MulticlassBalancer(risk_cat, score_text.values, race)
+for i, setup in enumerate(setups):
+    loss = setup[1]
+    goal = setup[0]
+    title = goal + ' goal with ' + loss + ' loss'
+    b.adjust_new(goal=goal, loss=loss)
+    b.plot(title=title, 
+           tight=True, 
+           show=False,
+           save=True,
+           img_dir='img/compas/')
+    fds.append(tools.fd_grid(b,
+                             loss=loss,
+                             goal=goal,
+                             step=.001,
+                             max=.2))
+
+# Combining the FD grids and exporting for plotting later on
+for i, df in enumerate(fds):
+    setup = setups[i][0] + ' ' + setups[i][1]
+    df['setup'] = [setup] * df.shape[0]
+
+all_fds = pd.concat(fds, axis=0)
+all_fds.to_csv('data/compas_fds.csv', index=False)
+
+# And getting the stats for a single canonical balancing run
+b.adjust(goal='strict', loss='macro')
+gap_stats = tools.balancing_stats(b)
+gap_stats['dataset'] = 'compas'
+gap_stats.to_csv('data/tables/compas_stats.csv',
+                 index=False)
+
 # Making a few basic density plots
 sns.set_style('darkgrid')
 sns.set_palette('colorblind')
@@ -89,51 +136,6 @@ for i, measure in enumerate(['otsu', 'compas']):
 fig.suptitle('Days to recidivism')
 plt.show()
 
-# Rolling the recidivists back in with the non-recidivists
-risk_cat = np.array(['Low'] * gap.shape[0], dtype='<U10')
-risk_cat[recid] = gap_cut
-
-# Balancing the predictions
-setups = [
-    ['odds', 'macro'], ['odds', 'micro'],
-    ['strict', 'macro'], ['strict', 'micro'],
-    ['opportunity', 'macro'], ['opportunity', 'micro'],
-    ['demographic_parity', 'macro'], ['demographic_parity', 'micro']
-]
-
-tables = []
-fds = []
-
-b = balancers.MulticlassBalancer(risk_cat, score_text.values, race)
-for i, setup in enumerate(setups):
-    loss = setup[1]
-    goal = setup[0]
-    title = goal + ' goal with ' + loss + ' loss'
-    b.adjust_new(goal=goal, loss=loss)
-    b.plot(title=title, 
-           tight=True, 
-           show=False,
-           save=True,
-           img_dir='img/compas/')
-    tables.append(tools.cp_mat_summary(b,
-                                     title=title,
-                                     slim=(i>0)))
-    fds.append(tools.fd_grid(b,
-                             loss=loss,
-                             goal=goal,
-                             step=.001,
-                             max=.2))
-
-# Combining the FD grids and exporting for plotting later on
-for i, df in enumerate(fds):
-    setup = setups[i][0] + ' ' + setups[i][1]
-    df['setup'] = [setup] * df.shape[0]
-
-all_fds = pd.concat(fds, axis=0)
-all_fds.to_csv('data/compas_fds.csv', index=False)
-
-
-pd.concat(tables, axis=1).to_csv('data/compas_day_tables.csv', index=False)
 
 '''Part 2: Risk stuff with COMPAS'''
 # Setting up the data again, only this time with non-recidivists included

@@ -13,6 +13,9 @@ import tools
 import balancers
 
 
+VIZ = False
+FD = False
+
 # Options for balancing
 setups = [
     ['odds', 'macro'], ['odds', 'micro'],
@@ -20,6 +23,9 @@ setups = [
     ['opportunity', 'macro'], ['opportunity', 'micro'],
     ['demographic_parity', 'macro'], ['demographic_parity', 'micro']
 ]
+
+# List to hold the stats from each balancing run
+stats = []
 
 '''Part 1: Drug use data'''
 # Loading the data
@@ -67,69 +73,70 @@ bin_preds = [np.array([preds == o], dtype=np.uint8) for o in outcomes]
 # Getting some basic stats
 rf_stats = tools.clf_metrics(y, preds)
 
-# Making a few basic density plots
-sns.set_style('darkgrid')
-sns.set_palette('colorblind')
+if VIZ:
+    # Making a few basic density plots
+    sns.set_style('darkgrid')
+    sns.set_palette('colorblind')
 
-# First for everyone
-fig, ax = plt.subplots(3, sharey=True)
-for i, o in enumerate(outcomes):
-    sns.kdeplot(x=probs[:, i],
-                hue=np.array(preds == o, dtype=np.uint8),
-                ax=ax[i],
-                fill=True)
-    ax[i].set_ylabel(o)
-
-fig.suptitle('Predicted probability of cannabis usage')
-plt.show()
-
-# And then by race
-fig, ax = plt.subplots(2, 3, sharey=True, sharex=True)
-for i, r in enumerate(races):
-    ids = np.where(race == r)[0]
-    for j, o in enumerate(outcomes):
-        sns.kdeplot(x=probs[ids, j],
-                    hue=bin_preds[j][0][ids],
-                    ax=ax[i, j],
+    # First for everyone
+    fig, ax = plt.subplots(3, sharey=True)
+    for i, o in enumerate(outcomes):
+        sns.kdeplot(x=probs[:, i],
+                    hue=np.array(preds == o, dtype=np.uint8),
+                    ax=ax[i],
                     fill=True)
-        ax[i, j].set_ylabel(r)
-        ax[i, j].set_xlabel(o)
+        ax[i].set_ylabel(o)
 
-fig.suptitle('Predicted probability of cannabis use by race')
-plt.show()
+    fig.suptitle('Predicted probability of cannabis usage')
+    plt.show()
 
-tables = []
-fds = []
+    # And then by race
+    fig, ax = plt.subplots(2, 3, sharey=True, sharex=True)
+    for i, r in enumerate(races):
+        ids = np.where(race == r)[0]
+        for j, o in enumerate(outcomes):
+            sns.kdeplot(x=probs[ids, j],
+                        hue=bin_preds[j][0][ids],
+                        ax=ax[i, j],
+                        fill=True)
+            ax[i, j].set_ylabel(r)
+            ax[i, j].set_xlabel(o)
+
+    fig.suptitle('Predicted probability of cannabis use by race')
+    plt.show()
 
 b = balancers.MulticlassBalancer(y, preds, race)
-for i, setup in enumerate(setups):
-    goal, loss = setup[0], setup[1]
-    title = goal + ' goal with ' + loss + ' loss'
-    b.adjust_new(goal=goal, loss=loss)
-    b.plot(title=title, 
-           tight=True, 
-           show=False,
-           save=True,
-           img_dir='img/weed/')
-    tables.append(tools.cp_mat_summary(b,
-                                       title=title,
-                                       slim=(i>0)))
-    fds.append(tools.fd_grid(b,
-                             loss=loss,
-                             goal=goal,
-                             step=.001,
-                             max=.15))
+if FD:
+    fds = []
+    for i, setup in enumerate(setups):
+        goal, loss = setup[0], setup[1]
+        title = goal + ' goal with ' + loss + ' loss'
+        b.adjust_new(goal=goal, loss=loss)
+        b.plot(title=title, 
+               tight=True, 
+               show=False,
+               save=True,
+               img_dir='img/weed/')
+        fds.append(tools.fd_grid(b,
+                                 loss=loss,
+                                 goal=goal,
+                                 step=.001,
+                                 max=.15))
 
-pd.concat(tables, axis=1).to_csv('tables/weed.csv', index=False)
+    # Making the fairness-discrimination plot
+    for i, df in enumerate(fds):
+        setup = setups[i][0] + ' ' + setups[i][1]
+        df['setup'] = [setup] * df.shape[0]
 
-# Making the fairness-discrimination plot
-for i, df in enumerate(fds):
-    setup = setups[i][0] + ' ' + setups[i][1]
-    df['setup'] = [setup] * df.shape[0]
+    # Making a df for plotting
+    all_fds = pd.concat(fds, axis=0)
+    all_fds.to_csv('data/fd_grids/cannabis.csv', index=False)
 
-# Making a df for plotting
-all_fds = pd.concat(fds, axis=0)
-all_fds.to_csv('data/fd_grids/cannabis.csv', index=False)
+# And getting the stats for a single canonical balancing run
+b.adjust(goal='strict', loss='macro')
+drug_stats = tools.balancing_stats(b)
+drug_stats['dataset'] = 'cannabis'
+stats.append(drug_stats)
 
 '''Part 2: Obesity data'''
 # Iporting the data
@@ -178,78 +185,79 @@ bin_preds = [np.array([preds == w], dtype=np.uint8)
 # Getting some basic stats
 rf_stats = tools.clf_metrics(y, preds)
 
-# Making a few basic density plots
-sns.set_style('darkgrid')
-sns.set_palette('colorblind')
-
-# First for everyone
-fig, ax = plt.subplots(nrows=1, 
-                       ncols=n_classes,
-                       sharey=True)
-for i, o in enumerate(weight_classes):
-    sns.kdeplot(x=probs[:, i],
-                hue=np.array(preds == o, dtype=np.uint8),
-                ax=ax[i],
-                fill=True)
-    ax[i].set_xlabel(o)
-    ax[i].set_ylabel('')
-
-fig.suptitle('Predicted probability of weight category')
-fig.set_tight_layout(True)
-plt.show()
-
-# And then by race
-fig, ax = plt.subplots(n_groups, 
-                       n_classes, 
-                       sharey=True, 
-                       sharex=True)
-for i, g in enumerate(genders):
-    ids = np.where(gender == g)[0]
-    for j, o in enumerate(weight_classes):
-        sns.kdeplot(x=probs[ids, j],
-                    hue=bin_preds[j][0][ids],
-                    ax=ax[i, j],
-                    fill=True)
-        ax[i, j].set_ylabel(r)
-        ax[i, j].set_xlabel(o)
-
-fig.suptitle('Predicted probability of weight category use by gender')
-plt.show()
-
-tables = []
-fds = []
-
 b = balancers.MulticlassBalancer(y, preds, gender)
-for i, setup in enumerate(setups):
-    goal, loss = setup[0], setup[1]
-    title = goal + ' goal with ' + loss + ' loss'
-    b.adjust_new(goal=goal, loss=loss)
-    b.plot(title=title, 
-           tight=True, 
-           show=False,
-           save=True,
-           img_dir='img/obesity/')
-    tables.append(tools.cp_mat_summary(b,
-                                       title=title,
-                                       slim=(i>0)))
-    
-    fds.append(tools.fd_grid(b,
-                             loss=loss,
-                             goal=goal,
-                             step=.001,
-                             max=.15))
 
-pd.concat(tables, axis=1).to_csv('data/tables/obesity tables.csv', 
-                                 index=False)
+if FD:
+    fds = []
+    for i, setup in enumerate(setups):
+        goal, loss = setup[0], setup[1]
+        title = goal + ' goal with ' + loss + ' loss'
+        b.adjust_new(goal=goal, loss=loss)
+        b.plot(title=title, 
+               tight=True, 
+               show=False,
+               save=True,
+               img_dir='img/obesity/')
+        fds.append(tools.fd_grid(b,
+                                 loss=loss,
+                                 goal=goal,
+                                 step=.001,
+                                 max=.15))
 
-# Making the fairness-discrimination plot
-for i, df in enumerate(fds):
-    setup = setups[i][0] + ' ' + setups[i][1]
-    df['setup'] = [setup] * df.shape[0]
+    # Making the fairness-discrimination plot
+    for i, df in enumerate(fds):
+        setup = setups[i][0] + ' ' + setups[i][1]
+        df['setup'] = [setup] * df.shape[0]
 
-# Making a df for plotting
-all_fds = pd.concat(fds, axis=0)
-all_fds.to_csv('data/fd_grids/obesity.csv', index=False)
+    # Making a df for plotting
+    all_fds = pd.concat(fds, axis=0)
+    all_fds.to_csv('data/fd_grids/obesity.csv', index=False)
+
+# And getting the stats for a single canonical balancing run
+b.adjust(goal='strict', loss='macro')
+obesity_stats = tools.balancing_stats(b)
+obesity_stats['dataset'] = 'obesity'
+stats.append(obesity_stats)
+
+if VIZ:
+    # Making a few basic density plots
+    sns.set_style('darkgrid')
+    sns.set_palette('colorblind')
+
+    # First for everyone
+    fig, ax = plt.subplots(nrows=1, 
+                           ncols=n_classes,
+                           sharey=True)
+    for i, o in enumerate(weight_classes):
+        sns.kdeplot(x=probs[:, i],
+                    hue=np.array(preds == o, dtype=np.uint8),
+                    ax=ax[i],
+                    fill=True)
+        ax[i].set_xlabel(o)
+        ax[i].set_ylabel('')
+
+    fig.suptitle('Predicted probability of weight category')
+    fig.set_tight_layout(True)
+    plt.show()
+
+    # And then by race
+    fig, ax = plt.subplots(n_groups, 
+                           n_classes, 
+                           sharey=True, 
+                           sharex=True)
+    for i, g in enumerate(genders):
+        ids = np.where(gender == g)[0]
+        for j, o in enumerate(weight_classes):
+            sns.kdeplot(x=probs[ids, j],
+                        hue=bin_preds[j][0][ids],
+                        ax=ax[i, j],
+                        fill=True)
+            ax[i, j].set_ylabel(r)
+            ax[i, j].set_xlabel(o)
+
+    fig.suptitle('Predicted probability of weight category use by gender')
+    plt.show()
+
 
 '''Part 3: Bar passage data'''
 # Importing the data and setting the classification target
@@ -301,68 +309,72 @@ fds = []
 
 # Running the balancing loop
 b = balancers.MulticlassBalancer(y, preds, white)
-for i, setup in enumerate(setups):
-    goal, loss = setup[0], setup[1]
-    title = goal + ' goal with ' + loss + ' loss'
-    '''
-    b.adjust_new(goal=goal, loss=loss)
-    b.plot(title=title, 
-           tight=True, 
-           show=False,
-           save=True,
-           img_dir='img/bar/')
-    tables.append(tools.cp_mat_summary(b,
-                                       title=title,
-                                       slim=(i>0)))'''
-    
-    fds.append(tools.fd_grid(b,
-                             loss=loss,
-                             goal=goal,
-                             step=.001,
-                             max=.15))
 
-# Making the fairness-discrimination plot
-for i, df in enumerate(fds):
-    setup = setups[i][0] + ' ' + setups[i][1]
-    df['setup'] = [setup] * df.shape[0]
+if FD:
+    for i, setup in enumerate(setups):
+        goal, loss = setup[0], setup[1]
+        title = goal + ' goal with ' + loss + ' loss'
+        b.adjust_new(goal=goal, loss=loss)
+        b.plot(title=title, 
+               tight=True, 
+               show=False,
+               save=True,
+               img_dir='img/bar/')
+        fds.append(tools.fd_grid(b,
+                                 loss=loss,
+                                 goal=goal,
+                                 step=.001,
+                                 max=.15))
 
-# Making a df for plotting
-all_fds = pd.concat(fds, axis=0)
-all_fds.to_csv('data/fd_grids/bar.csv', index=False)
+    # Making the fairness-discrimination plot
+    for i, df in enumerate(fds):
+        setup = setups[i][0] + ' ' + setups[i][1]
+        df['setup'] = [setup] * df.shape[0]
 
-# Doing the plots
-fig, ax = plt.subplots(nrows=1, 
-                       ncols=n_classes,
-                       sharey=True)
-for i, p in enumerate(pass_classes):
-    sns.kdeplot(x=probs[:, i],
-                hue=np.array(preds == p, dtype=np.uint8),
-                ax=ax[i],
-                fill=True)
-    ax[i].set_xlabel(p)
-    ax[i].set_ylabel('')
+    # Making a df for plotting
+    all_fds = pd.concat(fds, axis=0)
+    all_fds.to_csv('data/fd_grids/bar.csv', index=False)
 
-fig.suptitle('Predicted probability of bar passage')
-fig.set_tight_layout(True)
-plt.show()
+# And getting the stats for a single canonical balancing run
+b.adjust(goal='strict', loss='macro')
+bar_stats = tools.balancing_stats(b)
+bar_stats['dataset'] = 'bar passage'
+stats.append(bar_stats)
 
-# And then by race
-fig, ax = plt.subplots(2, 
-                       n_classes, 
-                       sharey=True, 
-                       sharex=True)
-for i, r in enumerate(np.unique(white)):
-    ids = np.where(white == r)[0]
-    for j, p in enumerate(pass_classes):
-        sns.kdeplot(x=probs[ids, j],
-                    hue=bin_preds[j][0][ids],
-                    ax=ax[i, j],
+if VIZ:
+    # Doing the plots
+    fig, ax = plt.subplots(nrows=1, 
+                           ncols=n_classes,
+                           sharey=True)
+    for i, p in enumerate(pass_classes):
+        sns.kdeplot(x=probs[:, i],
+                    hue=np.array(preds == p, dtype=np.uint8),
+                    ax=ax[i],
                     fill=True)
-        ax[i, j].set_ylabel(r)
-        ax[i, j].set_xlabel(p)
+        ax[i].set_xlabel(p)
+        ax[i].set_ylabel('')
 
-fig.suptitle('Predicted probability of bar passage by race')
-plt.show()
+    fig.suptitle('Predicted probability of bar passage')
+    fig.set_tight_layout(True)
+    plt.show()
+
+    # And then by race
+    fig, ax = plt.subplots(2, 
+                           n_classes, 
+                           sharey=True, 
+                           sharex=True)
+    for i, r in enumerate(np.unique(white)):
+        ids = np.where(white == r)[0]
+        for j, p in enumerate(pass_classes):
+            sns.kdeplot(x=probs[ids, j],
+                        hue=bin_preds[j][0][ids],
+                        ax=ax[i, j],
+                        fill=True)
+            ax[i, j].set_ylabel(r)
+            ax[i, j].set_xlabel(p)
+
+    fig.suptitle('Predicted probability of bar passage by race')
+    plt.show()
 
 '''Parkinson's data'''
 park = pd.read_csv('data/source/park.csv')
@@ -398,6 +410,8 @@ if 'score_cut' not in park.columns.values:
     score_cut = np.array(score_cut)
     park['score_cut'] = score_cut
     park.to_csv('data/source/park.csv', index=False)
+else:
+    score_cut = park.score_cut.values
 
 # Making a tall version for visualization
 score_df = pd.DataFrame(zip(score_cut, score), 
@@ -434,68 +448,78 @@ fds = []
 
 # Running the balancing loop
 b = balancers.MulticlassBalancer(y, preds, sex)
-for i, setup in enumerate(setups):
-    goal, loss = setup[0], setup[1]
-    title = goal + ' goal with ' + loss + ' loss'
-    b.adjust_new(goal=goal, loss=loss)
-    b.plot(title=title, 
-           tight=True, 
-           show=False,
-           save=True,
-           img_dir='img/park/')
-    tables.append(tools.cp_mat_summary(b,
-                                       title=title,
-                                       slim=(i>0)))
-    
-    fds.append(tools.fd_grid(b,
-                             loss=loss,
-                             goal=goal,
-                             step=.001,
-                             max=.15))
 
-# Making the fairness-discrimination plot
-for i, df in enumerate(fds):
-    setup = setups[i][0] + ' ' + setups[i][1]
-    df['setup'] = [setup] * df.shape[0]
+if FD:
+    for i, setup in enumerate(setups):
+        goal, loss = setup[0], setup[1]
+        title = goal + ' goal with ' + loss + ' loss'
+        b.adjust_new(goal=goal, loss=loss)
+        b.plot(title=title, 
+               tight=True, 
+               show=False,
+               save=True,
+               img_dir='img/park/')
+        tables.append(tools.cp_mat_summary(b,
+                                           title=title,
+                                           slim=(i>0)))
+        
+        fds.append(tools.fd_grid(b,
+                                 loss=loss,
+                                 goal=goal,
+                                 step=.001,
+                                 max=.15))
 
-# Making a df for plotting
-all_fds = pd.concat(fds, axis=0)
-all_fds.to_csv('data/fd_grids/park.csv', index=False)
+    # Making the fairness-discrimination plot
+    for i, df in enumerate(fds):
+        setup = setups[i][0] + ' ' + setups[i][1]
+        df['setup'] = [setup] * df.shape[0]
+
+    # Making a df for plotting
+    all_fds = pd.concat(fds, axis=0)
+    all_fds.to_csv('data/fd_grids/park.csv', index=False)
+
+# And getting the stats for a single canonical balancing run
+b.adjust(goal='strict', loss='macro')
+park_stats = tools.balancing_stats(b)
+park_stats['dataset'] = 'parkinsons'
+stats.append(park_stats)
 
 # Doing the plots
-fig, ax = plt.subplots(nrows=1, 
-                       ncols=n_classes,
-                       sharey=True)
-for i, p in enumerate(risk_levels):
-    sns.kdeplot(x=probs[:, i],
-                hue=np.array(preds == p, dtype=np.uint8),
-                ax=ax[i],
-                fill=True)
-    ax[i].set_xlabel(p)
-    ax[i].set_ylabel('')
-
-fig.suptitle('Predicted probability of PD stage')
-fig.set_tight_layout(True)
-plt.show()
-
-# And then by race
-fig, ax = plt.subplots(2, 
-                       n_classes, 
-                       sharey=True, 
-                       sharex=True)
-for i, s in enumerate(groups):
-    ids = np.where(sex == s)[0]
-    for j, p in enumerate(risk_levels):
-        sns.kdeplot(x=probs[ids, j],
-                    hue=bin_preds[j][0][ids],
-                    ax=ax[i, j],
+if VIZ:
+    fig, ax = plt.subplots(nrows=1, 
+                           ncols=n_classes,
+                           sharey=True)
+    for i, p in enumerate(risk_levels):
+        sns.kdeplot(x=probs[:, i],
+                    hue=np.array(preds == p, dtype=np.uint8),
+                    ax=ax[i],
                     fill=True)
-        ax[i, j].set_ylabel(g)
-        ax[i, j].set_xlabel(p)
+        ax[i].set_xlabel(p)
+        ax[i].set_ylabel('')
 
-fig.suptitle('Predicted probability of PD stage by sex')
-fig.set_tight_layout(True)
-plt.show()
+    fig.suptitle('Predicted probability of PD stage')
+    fig.set_tight_layout(True)
+    plt.show()
 
+    # And then by race
+    fig, ax = plt.subplots(2, 
+                           n_classes, 
+                           sharey=True, 
+                           sharex=True)
+    for i, s in enumerate(groups):
+        ids = np.where(sex == s)[0]
+        for j, p in enumerate(risk_levels):
+            sns.kdeplot(x=probs[ids, j],
+                        hue=bin_preds[j][0][ids],
+                        ax=ax[i, j],
+                        fill=True)
+            ax[i, j].set_ylabel(g)
+            ax[i, j].set_xlabel(p)
 
+    fig.suptitle('Predicted probability of PD stage by sex')
+    fig.set_tight_layout(True)
+    plt.show()
 
+'''Part whatever: Saving the results'''
+pd.concat(stats, axis=0).to_csv('data/tables/balancing_stats.csv',
+                                index=False)
