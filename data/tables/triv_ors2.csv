@@ -10,3 +10,6 @@ class_balance.two_rare,6.79
 group_balance.no_minority,1.0
 group_balance.slight_minority,0.73
 group_balance.strong_minority,1.35
+pred_bias.low,0.28
+pred_bias.medium,1.35
+pred_bias.high,2.07

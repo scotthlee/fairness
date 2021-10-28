@@ -14,15 +14,23 @@ bar = pd.read_csv('data/source/bar.csv')
 weed = pd.read_csv('data/source/drugs.csv')
 obesity = pd.read_csv('data/source/obesity.csv')
 compas = pd.read_csv('data/source/compas.csv')
+park = pd.read_csv('data/source/park.csv')
 
 # Reading in the individual fairness-discrimination grids
 bar_fds = pd.read_csv('data/fd_grids/bar.csv')
 obesity_fds = pd.read_csv('data/fd_grids/obesity_fds.csv')
 compas_fds = pd.read_csv('data/fd_grids/compas_fds.csv')
 weed_fds = pd.read_csv('data/fd_grids/cannabis_fds.csv')
+park_fds = pd.read_csv('data/fd_grids/park.csv')
 
-dfs = [compas_fds, weed_fds, obesity_fds, bar_fds]
-df_names = ['compas', 'cannabis', 'obesity', 'bar']
+dfs = [
+    compas_fds, weed_fds, obesity_fds, 
+    bar_fds, park_fds
+]
+df_names = [
+    'compas', 'cannabis', 'obesity', 
+    'bar', 'parkinsons'
+]
 
 # Stacking everything to feed to relpot
 for i, df in enumerate(dfs):

@@ -12,3 +12,9 @@ group_balance.one_slight_minority,1.1
 group_balance.one_strong_minority,0.98
 group_balance.two_slight_minorities,1.1
 group_balance.two_strong_minorities,0.98
+pred_bias.low_one,0.57
+pred_bias.medium_one,0.93
+pred_bias.high_one,1.41
+pred_bias.low_two,0.62
+pred_bias.medium_two,1.23
+pred_bias.high_two,1.5

@@ -108,19 +108,19 @@ def test_run(outcomes,
                              for i in range(len(b.cp_mats))])
         
         # Getting tpr-specific metrics
-        mean_tpr = 1 - b.macro_loss
-        old_tprs = b.old_rocs[:, :, 1]
-        new_tprs = b.rocs[:, :, 1]
+        old_tprs = np.array([np.diag(a) 
+                             for a in b.cp_mats]).flatten()
+        new_tprs = np.array([np.diag(a) 
+                             for a in b.new_cp_mats]).flatten()
+        new_mean = new_tprs.mean()
+        old_mean = old_tprs.mean()
+        mean_diff = new_mean - old_mean
+        rel_mean_diff = mean_diff / old_mean
+        diffs = new_tprs - old_tprs
+        max_diff = diffs[np.argmax(np.abs(diffs))]
+        rel_max_diff = max_diff / old_tprs[np.argmax(np.abs(diffs))]
         
-        old_tpr_means = np.mean(old_tprs, axis=1)
-        new_tpr_means = np.mean(new_tprs, axis=1)
-        mean_diffs = (new_tpr_means / old_tpr_means) / old_tpr_means
-        mn_mn_tpr_diff = np.mean(mean_diffs)
-        mx_mn_tpr_diff = mean_diffs[np.argmax(np.abs(mean_diffs))]
-        
-        tpr_diffs = ((new_tprs - old_tprs) / old_tprs).flatten()
-        mx_tpr_diff = tpr_diffs[np.argmax(np.abs(tpr_diffs))]
-        
+        # Getting metrics for Youden's J
         old_j = (1 - old_rocs[:, :, 0]) + old_rocs[:, :, 1] - 1
         new_j = (1 - new_rocs[:, :, 0]) + new_rocs[:, :, 1] - 1
         j_diffs = new_j - old_j
@@ -146,13 +146,15 @@ def test_run(outcomes,
     # Bundling things up
     out_df = pd.DataFrame([goal, loss, status, 
                            trivial, old_acc, new_acc,
-                           acc_diff, mean_tpr, mn_mn_tpr_diff,
-                           mx_mn_tpr_diff, mx_tpr_diff,
-                           mn_mn_diff_j, mx_mn_diff_j, mx_j_diff]).transpose()
+                           acc_diff, old_mean, new_mean, 
+                           mean_diff, rel_mean_diff, max_diff,
+                           rel_max_diff, mn_mn_diff_j, mx_mn_diff_j, 
+                           mx_j_diff]).transpose()
     out_df.columns = ['goal', 'loss', 'status', 
                       'trivial', 'old_acc', 'new_acc',
-                      'acc_diff', 'mean_tpr', 'mean_mean_tpr_diff',
-                      'max_mean_tpr_diff', 'max_tpr_diff', 'mean_mean_j_diff',
+                      'acc_diff', 'old_mean_tpr', 'new_mean_tpr',
+                      'mean_tpr_diff', 'rel_mean_tpr_diff', 'max_tpr_diff',
+                      'rel_max_tpr_diff', 'mean_mean_j_diff', 
                       'max_mean_j_diff', 'max_j_diff']
     if g_bal:
         out_df['group_balance'] = g_bal
