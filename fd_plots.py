@@ -37,29 +37,38 @@ for i, df in enumerate(dfs):
     df['dataset'] = [df_names[i]] * df.shape[0]
 
 all_dfs = pd.concat(dfs, axis=0)
-losses = ['micro', 'macro']
+
+# Also separating by objective function in case that's needed
+micro = all_dfs[['micro' in s for s in all_dfs.setup]]
+micro.setup = [s.replace(' micro', '') for s in micro.setup.values]
+macro = all_dfs[['macro' in s for s in all_dfs.setup]]
+macro.setup = [s.replace(' macro', '') for s in macro.setup.values]
+obj_dfs = [micro, macro]
 
 # Making the two relplots: one for micro loss, and one for macro
 sns.set_style('darkgrid')
+sns.set(font_scale=.75)
+
 for i, loss in enumerate(losses):
-    df = all_dfs[[loss in s for s in all_dfs.setup]]
-    fig, axes = plt.subplots(nrows=1, 
-                             ncols=len(df_names))
+    df = obj_dfs[i]
+    fig, axes = plt.subplots(nrows=2, ncols=3)
     
-    for i, ax in enumerate(axes):
-        ds_df = df[df.dataset == df_names[i]]
-        sns.lineplot(x='slack',
-                     y=loss + '_loss',
-                     hue='setup',
-                     data=ds_df,
-                     ci=None,
-                     ax=ax,
-                     palette='colorblind',
-                     legend=False)
-        ax.set(xlabel='slack',
-               ylabel='loss',
-               title=df_names[i])
-    
-    fig.suptitle(loss + ' loss as a function of slack')
+    for i, ax in enumerate(tools.flatten(axes)):
+        if i == len(df_names):
+            ax.axis('off')
+        else:
+            ds_df = df[df.dataset == df_names[i]]
+            sns.lineplot(x='slack',
+                         y=loss + '_loss',
+                         hue='setup',
+                         data=ds_df,
+                         ci=None,
+                         ax=ax,
+                         palette='colorblind',
+                         legend='brief')
+            ax.set(xlabel='slack',
+                   ylabel='loss',
+                   title=df_names[i])
+    fig.suptitle('Macro loss as a function of slack')
     fig.set_tight_layout(True)
     plt.show()
