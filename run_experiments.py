@@ -1,6 +1,7 @@
 import numpy as np
 import pickle
 import pandas as pd
+import argparse
 
 from itertools import permutations, combinations
 from importlib import reload
@@ -11,7 +12,16 @@ import balancers
 import tools
 
 if __name__ == '__main__':
-
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--runs',
+                        type=int,
+                        default=1,
+                        help='number of times to run the experiments')
+    args = parser.parse_args()
+    
+    # Setting the globals
+    seeds = np.random.randint(0, 1e6, args.runs)
+    
     # Trying a loop with multiprocessing
     outcomes = ['yes', 'no', 'maybe']
     groups2 = ['a', 'b']
@@ -71,29 +81,35 @@ if __name__ == '__main__':
     input_23 = tools.flatten([l for l in tools.flatten(input_23)])
 
     # Running the sim
-    with Pool() as p:
-        input = [[[(outcomes, 
-                    groups2, 
-                    t[0], 
-                    t[1], 
-                    t[2], 
-                    loss, 
-                    goal,
-                    sits[i][0],
-                    sits[i][1],
-                    sits[i][2])
-                for i, t in enumerate(input_23)]
-               for loss in losses]
-              for goal in goals]
-        input = tools.flatten([l for l in tools.flatten(input)])
-        res = p.starmap(tools.test_run, input)
-        p.close()
-        p.join()
-
-    rocs_23 = [[r['old_rocs'], r['new_rocs']] for r in res]
-    stats_23 = pd.concat([r['stats'] for r in res], axis=0)
-    stats_23['n_groups'] = 2
-
+    stats_23 = []
+    for seed in seeds:
+        with Pool() as p:
+            input = [[[(outcomes, 
+                        groups2, 
+                        t[0], 
+                        t[1], 
+                        t[2], 
+                        loss, 
+                        goal,
+                        sits[i][0],
+                        sits[i][1],
+                        sits[i][2],
+                        seed)
+                    for i, t in enumerate(input_23)]
+                   for loss in losses]
+                  for goal in goals]
+            input = tools.flatten([l for l in tools.flatten(input)])
+            res = p.starmap(tools.test_run, input)
+            p.close()
+            p.join()
+    
+            #rocs_23 = [[r['old_rocs'], r['new_rocs']] for r in res]
+            df = pd.concat([r['stats'] for r in res], axis=0)
+            df['n_groups'] = 2
+            df.to_csv('data/exp_stats.csv', mode='a', index=False)
+    
+    #stats_23 = pd.concat(stats_23, axis=0)
+    
     # Setting up a 3-group 3-group problem
     bias_types = ['low_one', 'medium_one', 'high_one',
                   'low_two', 'medium_two', 'high_two']
@@ -188,29 +204,35 @@ if __name__ == '__main__':
     input_33 = tools.flatten([l for l in tools.flatten(input_33)])
 
     # Running the sim
-    with Pool() as p:
-        input = [[[(outcomes, 
-                    groups3, 
-                    t[0], 
-                    t[1], 
-                    t[2], 
-                    loss, 
-                    goal,
-                    sits[i][0],
-                    sits[i][1],
-                    sits[i][2])
-                for i, t in enumerate(input_33)]
-               for loss in losses]
-              for goal in goals]
-        input = tools.flatten([l for l in tools.flatten(input)])
-        res = p.starmap(tools.test_run, input)
-        p.close()
-        p.join()
+    stats_33 = []
+    for seed in seeds:
+        with Pool() as p:
+            input = [[[(outcomes, 
+                        groups3, 
+                        t[0], 
+                        t[1], 
+                        t[2], 
+                        loss, 
+                        goal,
+                        sits[i][0],
+                        sits[i][1],
+                        sits[i][2],
+                        seed)
+                    for i, t in enumerate(input_33)]
+                   for loss in losses]
+                  for goal in goals]
+            input = tools.flatten([l for l in tools.flatten(input)])
+            res = p.starmap(tools.test_run, input)
+            p.close()
+            p.join()
 
-    rocs_33 = [[r['old_rocs'], r['new_rocs']] for r in res]
-    stats_33 = pd.concat([r['stats'] for r in res], axis=0)
-    stats_33['n_groups'] = 3
-
+            #rocs_33 = [[r['old_rocs'], r['new_rocs']] for r in res]
+            df = pd.concat([r['stats'] for r in res], axis=0)
+            df['n_groups'] = 3
+            df.to_csv('data/exp_stats.csv', mode='a', index=False)
+    
+    #stats_33 = pd.concat(stats_33, axis=0)
+    
     # Putting the 2 together and saving to disk
-    stats = pd.concat([stats_23, stats_33], axis=0)
-    stats.to_csv('data/exp_stats.csv', index=False)
+    #stats = pd.concat([stats_23, stats_33], axis=0)
+    #stats.to_csv('data/exp_stats.csv', mode='a', index=False)

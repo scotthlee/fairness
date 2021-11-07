@@ -78,15 +78,18 @@ def test_run(outcomes,
              goal='odds',
              g_bal=None,
              c_bal=None,
-             pred_b=None):
+             pred_b=None,
+             seed=2021):
     # Simulating the input data
     y_test = simulate_y(outcomes,
                         groups,
                         p_group,
-                        p_y_group)
+                        p_y_group,
+                        seed=seed)
     yh_test = simulate_yh(y_test,
                           p_yh_group,
-                          outcomes)
+                          outcomes,
+                          seed=seed)
     
     # Setting up the variables
     y = yh_test.y.values
@@ -95,17 +98,21 @@ def test_run(outcomes,
     
     # Running the optimizations
     b = balancers.MulticlassBalancer(y, yh, a)
-    b.adjust_new(loss=loss, goal=goal)
+    if 'parity' in goal:
+        b.adjust_new(loss=loss, goal=goal)
+    else:
+        b.adjust(loss=loss, goal=goal)
     status = b.opt.status
     old_acc = np.dot(b.p_y, np.diag(b.cp_mat))
+    
     if status == 0:
         # Getting loss and other basic metrics
         new_acc = 1 - b.loss
         acc_diff = (new_acc - old_acc) / old_acc
-        new_rocs = b.rocs
+        new_rocs = b.rocs.round(4)
         old_rocs = np.array([cpmat_to_roc(b.p_vecs[i],
                                           b.cp_mats[i])
-                             for i in range(len(b.cp_mats))])
+                             for i in range(len(b.cp_mats))]).round(4)
         
         # Getting tpr-specific metrics
         old_tprs = np.array([np.diag(a) 
@@ -141,7 +148,18 @@ def test_run(outcomes,
         mean_tpr = np.nan
         trivial = np.nan
         new_roc = np.nan
+        new_mean = np.nan
+        old_mean = np.nan
         old_roc = np.nan
+        mean_diff = np.nan
+        rel_mean_diff = np.nan
+        max_diff = np.nan
+        rel_max_diff = np.nan
+        mn_mn_diff_j = np.nan
+        mx_mn_diff_j = np.nan
+        mx_j_diff = np.nan
+        old_rocs = np.nan
+        new_rocs = np.nan
     
     # Bundling things up
     out_df = pd.DataFrame([goal, loss, status, 
@@ -1266,20 +1284,89 @@ def cp_mat_summary(b, slim=True, title=None, round=2):
 def fd_grid(b,
             loss='micro',
             goal='odds',
-            step=0.1,
-            max=1.0):
+            step=0.01,
+            max=1.0,
+            absval=True):
     '''Returns a grid of slack-vs.-loss metrics for making F-D plots'''
     micro_losses = []
     macro_losses = []
+    mean_tpr_diffs = []
+    mean_j_diffs = []
+    max_acc_diffs = []
+    
     slacks = np.arange(0, max + step, step)
     for s in slacks:
+        # Adjusting and pulling out the basic info
         b.adjust_new(goal=goal, loss=loss, slack=s)
+        rocs = b.rocs
+        p_y_a = b.p_y_a
+        
+        # Getting combinations of groups for pairwise comparisons
+        combos = list(combinations(range(b.n_groups), 2))
+        tpr_diffs = []
+        fpr_diffs = []
+        j_diffs = []
+        acc_diffs = []
+        
+        for c in combos:
+            tprs = rocs[c, :, 1]
+            fprs = rocs[c, :, 0]
+            js = tprs + (1 - fprs) - 1
+            accs = np.array([np.dot(p_y_a[i],
+                                    tprs[i])
+                             for i in c])
+            tpr_diffs.append(np.diff(tprs, axis=0).mean())
+            j_diffs.append(np.diff(js, axis=0).mean())
+            acc_diffs.append(np.diff(accs)[0])
+        
         micro_losses.append(b.loss)
         macro_losses.append(b.macro_loss)
+        mean_tpr_diffs.append(np.max(tpr_diffs))
+        mean_j_diffs.append(np.max(j_diffs))    
+        max_acc_diffs.append(np.max(acc_diffs))
     
-    out = pd.DataFrame([slacks, 
-                        micro_losses, 
-                        macro_losses]).transpose()
-    out.columns = ['slack', 'micro_loss', 'macro_loss']
+    out = pd.DataFrame([
+        slacks, micro_losses, macro_losses,
+        max_acc_diffs, mean_tpr_diffs, 
+        mean_j_diffs
+    ]).transpose()
+    
+    out.columns = [
+        'slack', 'micro_loss', 'macro_loss',
+        'max_acc_diff', 'max_mean_tpr_diff',
+        'max_mean_j_diff'
+    ]
+    if absval:
+        out = out.abs()
     return out
+
+
+def fd_point(b, absval=True):
+    '''Returns a single point for the unadjusted fairness vs.
+    discrimination for a predictor
+    '''    
+    combos = list(combinations(range(b.n_groups), 2))
+    tpr_diffs = []
+    j_diffs = []
+    
+    for c in combos:
+        tprs = b.old_rocs[c, :, 1]
+        fprs = b.old_rocs[c, :, 0]
+        js = tprs + (1 - fprs) - 1
+        tpr_diffs.append(np.diff(tprs, axis=0).mean())
+        j_diffs.append(np.diff(js, axis=0).mean())
+    
+    tpr_diff = np.max(tpr_diffs)
+    j_diff = np.max(j_diffs)
+    macro = 1 - b.old_rocs[:, :, 1].mean()
+    micro = 1 - np.dot(b.p_y, np.diag(b.cp_mat))
+    out = pd.DataFrame([macro, micro, tpr_diff, j_diff]).transpose()
+    out.columns = [
+        'macro_loss', 'micro_loss',
+        'max_mean_tpr_diff', 'max_mean_j_diff'
+    ]
+    if absval:
+        out = out.abs()
+    return out
+    
     
