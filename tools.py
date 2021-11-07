@@ -1321,9 +1321,9 @@ def fd_grid(b,
         
         micro_losses.append(b.loss)
         macro_losses.append(b.macro_loss)
-        mean_tpr_diffs.append(np.max(tpr_diffs))
-        mean_j_diffs.append(np.max(j_diffs))    
-        max_acc_diffs.append(np.max(acc_diffs))
+        mean_tpr_diffs.append(np.abs(tpr_diffs).max())
+        mean_j_diffs.append(np.abs(j_diffs).max())
+        max_acc_diffs.append(np.abs(acc_diffs).max())
     
     out = pd.DataFrame([
         slacks, micro_losses, macro_losses,
@@ -1336,37 +1336,44 @@ def fd_grid(b,
         'max_acc_diff', 'max_mean_tpr_diff',
         'max_mean_j_diff'
     ]
-    if absval:
-        out = out.abs()
+    out['adj'] = 1
+    point = fd_point(b)
+    point['adj'] = 0
+    out = pd.concat([out, point], axis=0)
+    
     return out
 
 
-def fd_point(b, absval=True):
+def fd_point(b):
     '''Returns a single point for the unadjusted fairness vs.
     discrimination for a predictor
     '''    
+    p_y_a = b.p_y_a
     combos = list(combinations(range(b.n_groups), 2))
     tpr_diffs = []
     j_diffs = []
+    acc_diffs = []
     
     for c in combos:
         tprs = b.old_rocs[c, :, 1]
         fprs = b.old_rocs[c, :, 0]
         js = tprs + (1 - fprs) - 1
+        accs = np.array([np.dot(p_y_a[i],
+                                tprs[i])
+                         for i in c])
         tpr_diffs.append(np.diff(tprs, axis=0).mean())
         j_diffs.append(np.diff(js, axis=0).mean())
+        acc_diffs.append(np.diff(accs)[0])
     
-    tpr_diff = np.max(tpr_diffs)
-    j_diff = np.max(j_diffs)
+    tpr_diff = np.abs(tpr_diffs).max()
+    j_diff = np.abs(j_diffs).max()
+    acc_diff = np.abs(acc_diffs).max()
     macro = 1 - b.old_rocs[:, :, 1].mean()
     micro = 1 - np.dot(b.p_y, np.diag(b.cp_mat))
-    out = pd.DataFrame([macro, micro, tpr_diff, j_diff]).transpose()
+    out = pd.DataFrame([micro, macro, acc_diff, 
+                        tpr_diff, j_diff]).transpose()
     out.columns = [
-        'macro_loss', 'micro_loss',
+        'macro_loss', 'micro_loss', 'max_acc_diff',
         'max_mean_tpr_diff', 'max_mean_j_diff'
     ]
-    if absval:
-        out = out.abs()
     return out
-    
-    

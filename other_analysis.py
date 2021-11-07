@@ -14,7 +14,7 @@ import balancers
 
 
 VIZ = False
-FD = False
+FD = True
 
 # Options for balancing
 setups = [

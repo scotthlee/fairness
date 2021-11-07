@@ -1304,8 +1304,10 @@ class MulticlassBalancer:
         cmap = sns.color_palette(palette, as_cmap=True)
         
         # Organizing the ROC points by group (rbg) and by outcome (rbo)
-        rbg = [r for r in self.old_rocs.values()]
-        rbo = [np.concatenate([r.loc[i].values.reshape(1, -1) 
+        rbg = [pd.DataFrame(r,
+                            columns=['fpr', 'tpr'])
+               for r in self.old_rocs]
+        rbo = [np.concatenate([r.values[i].reshape(1, -1) 
                                for r in rbg], 0)
                for i in range(self.n_classes)]
         
