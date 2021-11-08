@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import seaborn as sns
 import os
 
 from sklearn.metrics import confusion_matrix
@@ -7,6 +8,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score, average_precision_score
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.model_selection import StratifiedKFold, cross_val_predict
+from matplotlib import pyplot as plt
 from scipy.stats import binom, chi2, norm, percentileofscore
 from itertools import combinations
 from copy import deepcopy
@@ -1293,6 +1295,8 @@ def fd_grid(b,
     mean_tpr_diffs = []
     mean_j_diffs = []
     max_acc_diffs = []
+    max_parity_diffs = []
+    max_cp_diffs = []
     
     slacks = np.arange(0, max + step, step)
     for s in slacks:
@@ -1307,6 +1311,8 @@ def fd_grid(b,
         fpr_diffs = []
         j_diffs = []
         acc_diffs = []
+        parity_diffs = []
+        cp_diffs = []
         
         for c in combos:
             tprs = rocs[c, :, 1]
@@ -1315,26 +1321,36 @@ def fd_grid(b,
             accs = np.array([np.dot(p_y_a[i],
                                     tprs[i])
                              for i in c])
-            tpr_diffs.append(np.diff(tprs, axis=0).mean())
-            j_diffs.append(np.diff(js, axis=0).mean())
-            acc_diffs.append(np.diff(accs)[0])
+            counts = np.array([np.dot(p_y_a[i],
+                                      b.new_cp_mats[i])
+                               for i in c])
+            cp_diffs.append(np.abs(np.diff(b.new_cp_mats,
+                                           axis=0)).mean())
+            tpr_diffs.append(np.abs(np.diff(tprs, axis=0)).mean())
+            j_diffs.append(np.abs(np.diff(js, axis=0)).mean())
+            acc_diffs.append(np.abs(np.diff(accs)[0]))
+            parity_diffs.append(np.abs(np.diff(counts, axis=0)).mean())
         
         micro_losses.append(b.loss)
         macro_losses.append(b.macro_loss)
-        mean_tpr_diffs.append(np.abs(tpr_diffs).max())
-        mean_j_diffs.append(np.abs(j_diffs).max())
-        max_acc_diffs.append(np.abs(acc_diffs).max())
+        mean_tpr_diffs.append(np.max(tpr_diffs))
+        mean_j_diffs.append(np.max(j_diffs))
+        max_acc_diffs.append(np.max(acc_diffs))
+        max_parity_diffs.append(np.max(parity_diffs))
+        max_cp_diffs.append(np.max(cp_diffs))
     
     out = pd.DataFrame([
         slacks, micro_losses, macro_losses,
         max_acc_diffs, mean_tpr_diffs, 
-        mean_j_diffs
+        mean_j_diffs, max_parity_diffs,
+        max_cp_diffs
     ]).transpose()
     
     out.columns = [
         'slack', 'micro_loss', 'macro_loss',
         'max_acc_diff', 'max_mean_tpr_diff',
-        'max_mean_j_diff'
+        'max_mean_j_diff', 'max_mean_parity_diff',
+        'max_mean_cp_diff'
     ]
     out['adj'] = 1
     point = fd_point(b)
@@ -1351,8 +1367,11 @@ def fd_point(b):
     p_y_a = b.p_y_a
     combos = list(combinations(range(b.n_groups), 2))
     tpr_diffs = []
+    fpr_diffs = []
     j_diffs = []
     acc_diffs = []
+    parity_diffs = []
+    cp_diffs = []
     
     for c in combos:
         tprs = b.old_rocs[c, :, 1]
@@ -1361,19 +1380,81 @@ def fd_point(b):
         accs = np.array([np.dot(p_y_a[i],
                                 tprs[i])
                          for i in c])
-        tpr_diffs.append(np.diff(tprs, axis=0).mean())
-        j_diffs.append(np.diff(js, axis=0).mean())
-        acc_diffs.append(np.diff(accs)[0])
+        counts = np.array([np.dot(p_y_a[i],
+                                  b.cp_mats[i])
+                           for i in c])
+        cp_diffs.append(np.abs(np.diff(b.new_cp_mats,
+                                       axis=0)).mean())
+        tpr_diffs.append(np.abs(np.diff(tprs, axis=0)).mean())
+        j_diffs.append(np.abs(np.diff(js, axis=0)).mean())
+        acc_diffs.append(np.abs(np.diff(accs)[0]))
+        parity_diffs.append(np.abs(np.diff(counts, axis=0)).mean())
     
-    tpr_diff = np.abs(tpr_diffs).max()
-    j_diff = np.abs(j_diffs).max()
-    acc_diff = np.abs(acc_diffs).max()
+    tpr_diff = np.max(tpr_diffs)
+    j_diff = np.max(j_diffs)
+    acc_diff = np.max(acc_diffs)
+    parity_diff = np.max(parity_diffs)
+    cp_diff = np.max(cp_diffs)
     macro = 1 - b.old_rocs[:, :, 1].mean()
     micro = 1 - np.dot(b.p_y, np.diag(b.cp_mat))
     out = pd.DataFrame([micro, macro, acc_diff, 
-                        tpr_diff, j_diff]).transpose()
+                        tpr_diff, j_diff, parity_diff,
+                        cp_diff]).transpose()
     out.columns = [
         'macro_loss', 'micro_loss', 'max_acc_diff',
-        'max_mean_tpr_diff', 'max_mean_j_diff'
+        'max_mean_tpr_diff', 'max_mean_j_diff', 
+        'max_mean_parity_diff', 'max_mean_cp_diff'
     ]
     return out
+
+
+def fd_plot(grid, 
+            goal='odds', 
+            disc='macro', 
+            ax=None,
+            label_axes=False,
+            show=False):
+    # Separating original and adjusted values
+    pre = np.where(grid.adj == 0)[0]
+    post = np.where(grid.adj == 1)[0]
+    
+    # Setting the measure of fairness for the x-axis
+    if 'opportunity' in goal:
+        x = grid.max_mean_tpr_diff.values
+        x_name = 'max mean TPR diff'
+    elif 'odds' in goal:
+        x = grid.max_mean_j_diff.values
+        x_name = 'max mean J diff'
+    elif 'acc' in goal:
+        x = grid.max_acc_diff.values
+        x_name = 'max accuracy diff'
+    elif 'parity' in goal:
+        x = grid.max_mean_parity_diff.values
+    elif 'strict' in goal:
+        x = grid.max_mean_cp_diff.values
+    
+    # Setting the measure of discrimination for the y-axis
+    if disc == 'micro':
+        y = grid.micro_loss.values
+        y_name = 'micro loss'
+    elif disc == 'macro':
+        y = grid.macro_loss.values
+        y_name = 'macro loss'
+    
+    # Making the plot
+    lp = sns.lineplot(x=x[post], y=y[post], ax=ax)
+    sns.scatterplot(x=x[pre], 
+                    y=y[pre], 
+                    ax=lp, 
+                    marker='x',
+                    color='black')
+    
+    if label_axes:
+        lp.set(xlabel=x_name, ylabel=y_name)
+    
+    if show:
+        plt.show()
+    
+    return
+    
+    

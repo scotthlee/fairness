@@ -1,0 +1,6 @@
+dataset&old_acc&new_acc&rel_acc_diff&old_mean_tpr&new_mean_tpr&mean_tpr_diff&rel_mean_tpr_diff&max_tpr_diff&rel_max_tpr_diff
+cannabis&0.74&0.71&-0.04&0.67&0.63&-0.04&-0.05&-0.15&-0.36
+obesity&0.79&0.74&-0.07&0.79&0.74&-0.05&-0.07&-0.12&-0.16
+bar passage&0.66&0.66&0.01&0.41&0.4&-0.01&-0.02&0.31&0.76
+parkinsons&0.92&0.9&-0.02&0.92&0.89&-0.03&-0.03&-0.1&-0.1
+compas&0.28&0.53&0.89&0.34&0.37&0.03&0.08&-0.65&-1.0

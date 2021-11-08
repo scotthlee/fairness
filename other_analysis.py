@@ -14,7 +14,6 @@ import balancers
 
 
 VIZ = False
-FD = True
 
 # Options for balancing
 setups = [
@@ -105,34 +104,8 @@ if VIZ:
     fig.suptitle('Predicted probability of cannabis use by race')
     plt.show()
 
-b = balancers.MulticlassBalancer(y, preds, race)
-if FD:
-    fds = []
-    for i, setup in enumerate(setups):
-        goal, loss = setup[0], setup[1]
-        title = goal + ' goal with ' + loss + ' loss'
-        b.adjust_new(goal=goal, loss=loss)
-        b.plot(title=title, 
-               tight=True, 
-               show=False,
-               save=True,
-               img_dir='img/weed/')
-        fds.append(tools.fd_grid(b,
-                                 loss=loss,
-                                 goal=goal,
-                                 step=.001,
-                                 max=.15))
-
-    # Making the fairness-discrimination plot
-    for i, df in enumerate(fds):
-        setup = setups[i][0] + ' ' + setups[i][1]
-        df['setup'] = [setup] * df.shape[0]
-
-    # Making a df for plotting
-    all_fds = pd.concat(fds, axis=0)
-    all_fds.to_csv('data/fd_grids/cannabis.csv', index=False)
-
 # And getting the stats for a single canonical balancing run
+b = balancers.MulticlassBalancer(y, preds, race)
 b.adjust(goal='strict', loss='macro')
 drug_stats = tools.balancing_stats(b)
 drug_stats['dataset'] = 'cannabis'
@@ -186,32 +159,6 @@ bin_preds = [np.array([preds == w], dtype=np.uint8)
 rf_stats = tools.clf_metrics(y, preds)
 
 b = balancers.MulticlassBalancer(y, preds, gender)
-
-if FD:
-    fds = []
-    for i, setup in enumerate(setups):
-        goal, loss = setup[0], setup[1]
-        title = goal + ' goal with ' + loss + ' loss'
-        b.adjust_new(goal=goal, loss=loss)
-        b.plot(title=title, 
-               tight=True, 
-               show=False,
-               save=True,
-               img_dir='img/obesity/')
-        fds.append(tools.fd_grid(b,
-                                 loss=loss,
-                                 goal=goal,
-                                 step=.001,
-                                 max=.15))
-
-    # Making the fairness-discrimination plot
-    for i, df in enumerate(fds):
-        setup = setups[i][0] + ' ' + setups[i][1]
-        df['setup'] = [setup] * df.shape[0]
-
-    # Making a df for plotting
-    all_fds = pd.concat(fds, axis=0)
-    all_fds.to_csv('data/fd_grids/obesity.csv', index=False)
 
 # And getting the stats for a single canonical balancing run
 b.adjust(goal='strict', loss='macro')
@@ -304,13 +251,20 @@ bin_preds = [np.array([preds == p], dtype=np.uint8)
 # Getting some basic stats
 rf_stats = tools.clf_metrics(y, preds)
 
-tables = []
-fds = []
-
 # Running the balancing loop
 b = balancers.MulticlassBalancer(y, preds, white)
+b.adjust(goal='strict', loss='macro')
+bar_stats = tools.balancing_stats(b)
+bar_stats['dataset'] = 'bar passage'
+stats.append(bar_stats)
 
-if FD:
+# Exporting the predictions
+bar['a'] = white
+bar['y'] = passed
+bar['yhat'] = preds
+bar.to_csv('data/source/bar.csv', index=False)
+
+if VIZ:
     for i, setup in enumerate(setups):
         goal, loss = setup[0], setup[1]
         title = goal + ' goal with ' + loss + ' loss'
@@ -320,28 +274,7 @@ if FD:
                show=False,
                save=True,
                img_dir='img/bar/')
-        fds.append(tools.fd_grid(b,
-                                 loss=loss,
-                                 goal=goal,
-                                 step=.001,
-                                 max=.15))
-
-    # Making the fairness-discrimination plot
-    for i, df in enumerate(fds):
-        setup = setups[i][0] + ' ' + setups[i][1]
-        df['setup'] = [setup] * df.shape[0]
-
-    # Making a df for plotting
-    all_fds = pd.concat(fds, axis=0)
-    all_fds.to_csv('data/fd_grids/bar.csv', index=False)
-
-# And getting the stats for a single canonical balancing run
-b.adjust(goal='strict', loss='macro')
-bar_stats = tools.balancing_stats(b)
-bar_stats['dataset'] = 'bar passage'
-stats.append(bar_stats)
-
-if VIZ:
+    
     # Doing the plots
     fig, ax = plt.subplots(nrows=1, 
                            ncols=n_classes,
@@ -409,7 +342,6 @@ if 'score_cut' not in park.columns.values:
                       labels=risk_levels).to_list()
     score_cut = np.array(score_cut)
     park['score_cut'] = score_cut
-    park.to_csv('data/source/park.csv', index=False)
 else:
     score_cut = park.score_cut.values
 
@@ -443,46 +375,18 @@ bin_preds = [np.array([preds == p], dtype=np.uint8)
 # Getting some basic stats
 rf_stats = tools.clf_metrics(y, preds)
 
-tables = []
-fds = []
-
 # Running the balancing loop
 b = balancers.MulticlassBalancer(y, preds, sex)
-
-if FD:
-    for i, setup in enumerate(setups):
-        goal, loss = setup[0], setup[1]
-        title = goal + ' goal with ' + loss + ' loss'
-        b.adjust_new(goal=goal, loss=loss)
-        b.plot(title=title, 
-               tight=True, 
-               show=False,
-               save=True,
-               img_dir='img/park/')
-        tables.append(tools.cp_mat_summary(b,
-                                           title=title,
-                                           slim=(i>0)))
-        
-        fds.append(tools.fd_grid(b,
-                                 loss=loss,
-                                 goal=goal,
-                                 step=.001,
-                                 max=.15))
-
-    # Making the fairness-discrimination plot
-    for i, df in enumerate(fds):
-        setup = setups[i][0] + ' ' + setups[i][1]
-        df['setup'] = [setup] * df.shape[0]
-
-    # Making a df for plotting
-    all_fds = pd.concat(fds, axis=0)
-    all_fds.to_csv('data/fd_grids/park.csv', index=False)
-
-# And getting the stats for a single canonical balancing run
 b.adjust(goal='strict', loss='macro')
 park_stats = tools.balancing_stats(b)
 park_stats['dataset'] = 'parkinsons'
 stats.append(park_stats)
+
+# Exporting the predictions
+park['a'] = sex
+park['y'] = y
+park['yhat'] = preds
+park.to_csv('data/source/park.csv', index=False)
 
 # Doing the plots
 if VIZ:
