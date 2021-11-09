@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import pickle
 import statsmodels.formula.api as smf
 
 from sklearn.ensemble import RandomForestClassifier
@@ -68,6 +69,15 @@ rf.fit(X, y)
 probs = rf.oob_decision_function_
 preds = np.array([np.unique(y)[i] for i in np.argmax(probs, axis=1)])
 bin_preds = [np.array([preds == o], dtype=np.uint8) for o in outcomes]
+
+# Exporting the predictions
+drugs['a'] = race
+drugs['y'] = y
+drugs['yhat'] = preds
+drugs.to_csv('data/source/drugs.csv', index=False)
+
+with open('data/source/weed_probs.pkl', 'wb') as f:
+    pickle.dump(probs, f)
 
 # Getting some basic stats
 rf_stats = tools.clf_metrics(y, preds)
@@ -166,6 +176,15 @@ obesity_stats = tools.balancing_stats(b)
 obesity_stats['dataset'] = 'obesity'
 stats.append(obesity_stats)
 
+# Exporting the results
+obesity['a'] = gender
+obesity['y'] = y
+obesity['yhat'] = preds
+obesity.to_csv('data/source/obesity.csv', index=False)
+
+with open('data/source/obesity_probs.pkl', 'wb') as f:
+    pickle.dump(probs, f)
+
 if VIZ:
     # Making a few basic density plots
     sns.set_style('darkgrid')
@@ -263,6 +282,9 @@ bar['a'] = white
 bar['y'] = passed
 bar['yhat'] = preds
 bar.to_csv('data/source/bar.csv', index=False)
+
+with open('data/source/bar_probs.pkl', 'wb') as f:
+    pickle.dump(probs, f)
 
 if VIZ:
     for i, setup in enumerate(setups):
@@ -381,6 +403,9 @@ b.adjust(goal='strict', loss='macro')
 park_stats = tools.balancing_stats(b)
 park_stats['dataset'] = 'parkinsons'
 stats.append(park_stats)
+
+with open('data/source/park_probs.pkl', 'wb') as f:
+    pickle.dump(probs, f)
 
 # Exporting the predictions
 park['a'] = sex

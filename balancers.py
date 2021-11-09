@@ -525,8 +525,8 @@ class MulticlassBalancer:
                  y_,
                  a,
                  data=None,
-                 summary=False,
-                 threshold_objective='j'):
+                 preds_are_probs=False,
+                 summary=False):
 
         """Initializes an instance of a PredictionBalancer.
         
@@ -602,7 +602,6 @@ class MulticlassBalancer:
             
         # Setting the targets
         self.__y = y
-        self.__y_ = y_
         self.__a = a
         self.rocs = None
         self.roc = None
@@ -614,6 +613,14 @@ class MulticlassBalancer:
         self.p_a = tools.p_vec(a)
         self.n_classes = self.p_y.shape[0]
         self.outcomes = np.unique(y)
+        
+        # Converting predicted probabilities to class predictions
+        if preds_are_probs:
+            self.old_brier_score = tools.brier_score(y, y_)
+            y_ = np.array([self.outcomes[i]
+                           for i in np.argmax(y_, axis=1)])
+        else:
+            self.old_brier_score = np.nan
         
         # Getting some basic info for each group
         self.groups = np.unique(a)
@@ -903,6 +910,11 @@ class MulticlassBalancer:
                                             self.cp_mats)
             self.loss = 1 - np.sum(self.p_vecs * self.rocs[:, :, 1])
             self.macro_loss = 1 - np.mean(self.rocs[:, :, 1])
+            preds_as_probs = tools.cat_to_probs(self.__y,
+                                                self.__a, 
+                                                self.new_cp_mats)
+            self.brier_score = tools.brier_score(self.__y, 
+                                                 preds_as_probs)
         else:
             print('\nBalancing failed: Linear program is infeasible.\n')
             self.m = np.nan
@@ -1011,11 +1023,8 @@ class MulticlassBalancer:
         num_cons_den = (self.n_groups - 1) * self.n_classes
         cons_den = cons_den.reshape(num_cons_den, -1)
 
-        return np.vstack([cons_numer, cons_den])
-        
-        
-        
-
+        return np.vstack([cons_numer, cons_den])    
+    
     def get_equal_cons_given_mat(self, M):
         '''Given some matrix A of values desired to be fair across
         protected attributes, and which can be decomposed as A = M * P^T
@@ -1199,6 +1208,11 @@ class MulticlassBalancer:
                                             self.cp_mats)
             self.loss = 1 - np.sum(self.p_vecs * self.rocs[:, :, 1])
             self.macro_loss = 1 - np.mean(self.rocs[:, :, 1])
+            preds_as_probs = tools.cat_to_probs(self.__y,
+                                                self.__a, 
+                                                self.new_cp_mats)
+            self.brier_score = tools.brier_score(self.__y, 
+                                                 preds_as_probs)
         else:
             print('\nBalancing failed: Linear program is infeasible.\n')
             self.rocs = np.nan

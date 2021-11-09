@@ -1304,6 +1304,7 @@ def fd_grid(b,
     '''Returns a grid of slack-vs.-loss metrics for making F-D plots'''
     micro_losses = []
     macro_losses = []
+    brier_scores = []
     mean_tpr_diffs = []
     mean_j_diffs = []
     max_acc_diffs = []
@@ -1345,6 +1346,7 @@ def fd_grid(b,
         
         micro_losses.append(b.loss)
         macro_losses.append(b.macro_loss)
+        brier_scores.append(b.brier_score)
         mean_tpr_diffs.append(np.max(tpr_diffs))
         mean_j_diffs.append(np.max(j_diffs))
         max_acc_diffs.append(np.max(acc_diffs))
@@ -1353,16 +1355,15 @@ def fd_grid(b,
     
     out = pd.DataFrame([
         slacks, micro_losses, macro_losses,
-        max_acc_diffs, mean_tpr_diffs, 
+        brier_scores, max_acc_diffs, mean_tpr_diffs, 
         mean_j_diffs, max_parity_diffs,
         max_cp_diffs
     ]).transpose()
     
     out.columns = [
         'slack', 'micro_loss', 'macro_loss',
-        'max_acc_diff', 'max_mean_tpr_diff',
-        'max_mean_j_diff', 'max_mean_parity_diff',
-        'max_mean_cp_diff'
+        'brier_score', 'max_acc_diff', 'max_mean_tpr_diff',
+        'max_mean_j_diff', 'max_mean_parity_diff', 'max_mean_cp_diff'
     ]
     out['adj'] = 1
     point = fd_point(b)
@@ -1409,12 +1410,13 @@ def fd_point(b):
     cp_diff = np.max(cp_diffs)
     macro = 1 - b.old_rocs[:, :, 1].mean()
     micro = 1 - np.dot(b.p_y, np.diag(b.cp_mat))
-    out = pd.DataFrame([micro, macro, acc_diff, 
-                        tpr_diff, j_diff, parity_diff,
-                        cp_diff]).transpose()
+    brier_score = b.old_brier_score
+    out = pd.DataFrame([micro, macro, brier_score,
+                        acc_diff, tpr_diff, j_diff, 
+                        parity_diff, cp_diff]).transpose()
     out.columns = [
-        'macro_loss', 'micro_loss', 'max_acc_diff',
-        'max_mean_tpr_diff', 'max_mean_j_diff', 
+        'macro_loss', 'micro_loss', 'brier_score',
+        'max_acc_diff', 'max_mean_tpr_diff', 'max_mean_j_diff', 
         'max_mean_parity_diff', 'max_mean_cp_diff'
     ]
     return out
@@ -1424,6 +1426,7 @@ def fd_plot(grid,
             goal='odds', 
             disc='macro', 
             ax=None,
+            plot_original=True,
             label_axes=False,
             show=False):
     # Separating original and adjusted values
@@ -1452,15 +1455,21 @@ def fd_plot(grid,
     elif disc == 'macro':
         y = grid.macro_loss.values
         y_name = 'macro loss'
+    elif disc == 'brier':
+        y = grid.brier_score.values
+        y_name = 'Brier score'
     
     # Making the plot
     lp = sns.lineplot(x=x[post], y=y[post], ax=ax)
-    sns.scatterplot(x=x[pre], 
-                    y=y[pre], 
-                    ax=lp, 
-                    marker='x',
-                    color='black')
     
+    # Optionally adding the original point
+    if plot_original:
+        sns.scatterplot(x=x[pre], 
+                        y=y[pre], 
+                        ax=lp, 
+                        marker='x',
+                        color='black')
+        
     if label_axes:
         lp.set(xlabel=x_name, ylabel=y_name)
     
