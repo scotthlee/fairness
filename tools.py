@@ -243,6 +243,7 @@ def balancing_stats(b):
     
     return out_df
 
+
 def simulate_y(y_levels,
                a_levels,
                p_a,
@@ -480,14 +481,25 @@ def mcnemar_test(true, pred, cc=True):
 # Calculates the Brier score for multiclass problems
 def brier_score(true, pred):
     n_classes = len(np.unique(true))
-    assert n_classes > 1
     if n_classes == 2:
+        pred = pred.flatten()
         bs = np.sum((pred - true)**2) / true.shape[0]
     else:
         y = onehot_matrix(true)
-        bs = np.mean(np.sum((pred - y)**2, axis=1))
+        row_diffs = np.diff((pred, y), axis=0)[0]
+        squared_diffs = row_diffs ** 2
+        row_sums = np.sum(squared_diffs, axis=1) 
+        bs = row_sums.mean()
     return bs
 
+
+def cat_to_probs(y, a, cp_mats):
+    outcomes = np.unique(y)
+    groups = np.unique(a)
+    y_dict = [dict(zip(outcomes, m)) for m in cp_mats]
+    a_dict = dict(zip(groups, y_dict))
+    probs = np.array([a_dict[a[i]][y[i]] for i in range(y.shape[0])])
+    return probs
 
 # Runs basic diagnostic stats on categorical predictions
 def clf_metrics(true, 
@@ -1456,5 +1468,3 @@ def fd_plot(grid,
         plt.show()
     
     return
-    
-    

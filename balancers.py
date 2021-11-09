@@ -1208,7 +1208,7 @@ class MulticlassBalancer:
         if summary:
             self.summary(org=False)
     
-    def predict(self, y_, a, binom=False):
+    def predict(self, y_, a, seed=2021):
         """Generates bias-adjusted predictions on new data.
         
         Parameters
@@ -1228,16 +1228,20 @@ class MulticlassBalancer:
         y~ : ndarray of shape (n_samples,)
             The adjusted binary predictions.
         """
-        # Optional thresholding for continuous predictors
-        if np.any([0 < x < 1 for x in y_]):
-            group_ids = [np.where(a == g)[0] for g in self.groups]
-            y_ = deepcopy(y_)
-            for g, cut in enumerate(self.cuts):
-                y_[group_ids[g]] = tools.threshold(y_[group_ids[g]], cut)
-        
-        # Returning the adjusted predictions
-        adj = tools.pred_from_pya(y_, a, self.pya, binom)
-        return adj
+        pd.options.mode.chained_assignment = None
+        y_tilde = deepcopy(y_)
+        groups = np.unique(a)
+        outcomes = self.outcomes
+        np.random.seed(seed)
+        seeds = np.random.randint(0, 1e6, len(groups))
+        for i, g in enumerate(groups):
+            for j, o in enumerate(outcomes):
+                y_ids = np.where((a == g) & (y_ == o))[0]
+                np.random.seed(seeds[i])
+                y_tilde[y_ids] = np.random.choice(a=outcomes,
+                                                  p=self.new_cp_mats[i][j],
+                                                  size=len(y_ids))
+        return y_tilde
     
     def plot(self, 
              s1=50,
