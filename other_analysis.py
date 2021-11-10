@@ -279,7 +279,7 @@ stats.append(bar_stats)
 
 # Exporting the predictions
 bar['a'] = white
-bar['y'] = passed
+bar['y'] = y
 bar['yhat'] = preds
 bar.to_csv('data/source/bar.csv', index=False)
 

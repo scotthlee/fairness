@@ -619,8 +619,6 @@ class MulticlassBalancer:
             self.old_brier_score = tools.brier_score(y, y_)
             y_ = np.array([self.outcomes[i]
                            for i in np.argmax(y_, axis=1)])
-        else:
-            self.old_brier_score = np.nan
         
         # Getting some basic info for each group
         self.groups = np.unique(a)
@@ -648,6 +646,13 @@ class MulticlassBalancer:
                                        self.cp_mats[i])
                     for i in range(self.n_groups)]
         self.old_rocs = np.array(old_rocs)
+        
+        if not preds_are_probs:
+            probs = tools.cat_to_probs(self.__y, 
+                                       self.__a, 
+                                       self.cp_mats)
+            self.old_brier_score = tools.brier_score(self.__y,
+                                                     probs)
         
         if summary:
             self.summary(adj=False)

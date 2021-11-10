@@ -39,9 +39,8 @@ fig, axes = plt.subplots(nrows=4, ncols=4, sharey=False)
 for i, goal in enumerate(goals):
     for j, df in enumerate(datasets):
         b = balancers.MulticlassBalancer(df.y.values,
-                                         probs[j],
-                                         df.a.values,
-                                         preds_are_probs=True)
+                                         df.yhat.values,
+                                         df.a.values)
         grid = tools.fd_grid(b, 
                              step=.01,
                              loss='macro', 
