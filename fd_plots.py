@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import pickle
 
 from matplotlib import pyplot as plt
 
@@ -56,7 +57,7 @@ for i, goal in enumerate(goals):
 
 # Labeling the datasets
 for i, ds in enumerate(df_names):
-    plt.setp(axes[3, i], xlabel=ds)
+    plt.setp(axes[0, i], title=ds)
 
 fig.set_tight_layout(True)
 plt.suptitle('Fairness vs. discrimination')

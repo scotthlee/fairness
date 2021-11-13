@@ -619,6 +619,7 @@ class MulticlassBalancer:
             self.old_brier_score = tools.brier_score(y, y_)
             y_ = np.array([self.outcomes[i]
                            for i in np.argmax(y_, axis=1)])
+        self.y_ = y_
         
         # Getting some basic info for each group
         self.groups = np.unique(a)
@@ -766,9 +767,10 @@ class MulticlassBalancer:
                loss='micro',
                round=4,
                slack=0,
-               return_optima=False,
-               summary=False,
-               binom=False):
+               cv=False,
+               seed=None,
+               shuffle=False,
+               summary=False):
         """Adjusts predictions to satisfy a fairness constraint.
         
         Parameters
@@ -785,16 +787,9 @@ class MulticlassBalancer:
         round : int, default 4
             Decimal places for rounding results.
         
-        return_optima: bool, default True
-            Whether to reutn optimal loss and ROC coordinates.
-        
         summary : bool, default True
             Whether to print post-adjustment false-positive and true-positive \
             rates for each group.
-        
-        binom : bool, default False
-            Whether to generate adjusted predictions by sampling from a \
-            binomial distribution.
         
         Returns
         -------
@@ -805,134 +800,172 @@ class MulticlassBalancer:
         #       self.cp_mats contains the probabilities of y^ given y and a
         #       self.cp_mat contains the probabilities of y^ given y
         # the above should be added to the attributes doc string
-
-        if loss == 'micro':
-            loss_coefs = self.get_0_1_loss_coefs()
-        elif loss == 'macro':
-            loss_coefs = self.get_pya_weighted_01_loss_coefs()
-        else:
-            raise ValueError('Loss type %s not recognized' %loss)
-
-        # Create a n_constraints by
-        # n_classes (y~) by n_classes (y^) by n_groups matrix of
-        # constraints, adding in additional constraints as needed 
-        # to the first dim
         self.goal = goal
-        if goal == 'odds':
-            cons_mat = self.get_equal_odds_constraints()
-        elif goal == 'opportunity':
-            cons_mat = self.get_equal_opp_constraints()
-        elif goal == 'strict':
-            cons_mat = self.get_strict_constraints()
-        elif goal == 'demographic_parity':
-            cons_mat = self.get_demographic_parity_constraints()
-        elif goal == 'positive_predictive_parity':
-            cons_mat = self.get_pred_parity_constraints(type_='positive')
-        elif goal == 'strict_predictive_parity':
-            cons_mat = self.get_pred_parity_constraints(type_='strict')
-        else:
-            raise ValueError('Fairness type/goal %s not recognized' %goal)
-
-        # Add in constraint for derived probabilities to sum to one
-        # for every fixed group and (true) class they should be
-        # normalized, so one constraint for every (group, class) pair
-        cons_norm = np.zeros(
-            (self.n_groups * self.n_classes,
-            self.n_classes, self.n_classes, self.n_groups)
-        )
-        for con_idx in range(cons_norm.shape[0]):
-            c = con_idx % int(self.n_classes)
-            g = con_idx // int(self.n_classes)
-            cons_norm[con_idx, c, :, g] = np.ones(self.n_classes)
-        cons_norm = cons_norm.reshape(cons_norm.shape[0], -1)
-#        cons_mat = np.concatenate([cons_mat, cons_norm], axis=0)            
-        #print(cons_mat)
-            
-
-        # Form the bounds of the constraints:
-        #    For odds/opp/strict these are 0 since they are equalities.
-        #    For the normalization constraints these are 1
-#        cons_bounds = np.zeros(cons_mat.shape[0])
-#        cons_bounds = np.ones(cons_mat.shape[0]) * slack
-#        cons_bounds[-cons_norm.shape[0]:] = 1 # moved to inside slack if/else statement
-
-        if slack == 0:
-            # all constraints are equality constraints only
-            cons_mat = np.concatenate([cons_mat, cons_norm], axis=0)            
-            cons_bounds = np.ones(cons_mat.shape[0]) * slack
-            cons_bounds[-cons_norm.shape[0]:] = 1
-            self.opt = sp.optimize.linprog(c=loss_coefs,
-                                       bounds=[0, 1],
-                                       A_eq=cons_mat,
-                                       b_eq=cons_bounds)
-                                       #method='highs')
-            self.con_bounds = cons_bounds
-            self.cons = cons_mat
-        else:
-            # constraints for normalization are still equality, but
-            # constraints for equality across groups are relaxed (small inequalities allowed)
-            cons_norm_bounds = np.ones(cons_norm.shape[0]) 
-
-            # Have to account for abs value of the difference being within slack
-            # by adding a second set of constraints. AX < slack represents ax - bx < slack
-            # -AX < slack represents ax - bx > -slack
-            cons_ineq_bounds = np.ones(2 * cons_mat.shape[0]) * slack
-            abs_val_cons = np.concatenate([cons_mat, -cons_mat], axis=0)
-            self.opt = sp.optimize.linprog(c=loss_coefs,
-                                       bounds=[0, 1],
-                                       A_eq=cons_norm,
-                                       b_eq=cons_norm_bounds,
-                                       A_ub=abs_val_cons,
-                                       b_ub=cons_ineq_bounds)
-                                       #method='highs')
-            # tbh not sure if any of this really makes sense to do sense the
-            # attributes will vary based on the inputs-does anything actually
-            # need to access the bounds after running?
-            self.con_bounds = cons_norm_bounds
-            self.con_ineq_bounds = cons_ineq_bounds
-            self.con = abs_val_cons
-            self.con_norm = cons_norm_bounds
         
-        if self.opt.status == 0:
-            # Reshaping the solution
-            y_derived = self.opt.x.reshape([self.n_classes, 
-                                            self.n_classes, 
-                                            self.n_groups])
-            self.y_d = y_derived
-            W = np.einsum('ijk, jlk->ilk', 
-                          self.cp_mats_t.transpose((1, 0, 2)),  
-                          y_derived)
-            self.m = np.array([y_derived[:, :, i] 
-                               for i in range(self.n_groups)])
+        # Deciding whether to get predictions with cross-validation or by
+        # running the adjustment for the whole dataset
+        if not cv:
+
+            if loss == 'micro':
+                loss_coefs = self.get_0_1_loss_coefs()
+            elif loss == 'macro':
+                loss_coefs = self.get_pya_weighted_01_loss_coefs()
+            else:
+                raise ValueError('Loss type %s not recognized' %loss)
+
+            # Create a n_constraints by
+            # n_classes (y~) by n_classes (y^) by n_groups matrix of
+            # constraints, adding in additional constraints as needed 
+            # to the first dim
+            if goal == 'odds':
+                cons_mat = self.get_equal_odds_constraints()
+            elif goal == 'opportunity':
+                cons_mat = self.get_equal_opp_constraints()
+            elif goal == 'strict':
+                cons_mat = self.get_strict_constraints()
+            elif goal == 'demographic_parity':
+                cons_mat = self.get_demographic_parity_constraints()
+            elif goal == 'positive_predictive_parity':
+                cons_mat = self.get_pred_parity_constraints(type_='positive')
+            elif goal == 'strict_predictive_parity':
+                cons_mat = self.get_pred_parity_constraints(type_='strict')
+            else:
+                raise ValueError('Fairness type/goal %s not recognized' %goal)
+
+            # Add in constraint for derived probabilities to sum to one
+            # for every fixed group and (true) class they should be
+            # normalized, so one constraint for every (group, class) pair
+            cons_norm = np.zeros(
+                (self.n_groups * self.n_classes,
+                self.n_classes, self.n_classes, self.n_groups)
+            )
+            for con_idx in range(cons_norm.shape[0]):
+                c = con_idx % int(self.n_classes)
+                g = con_idx // int(self.n_classes)
+                cons_norm[con_idx, c, :, g] = np.ones(self.n_classes)
+            cons_norm = cons_norm.reshape(cons_norm.shape[0], -1)
+    #        cons_mat = np.concatenate([cons_mat, cons_norm], axis=0)            
+            #print(cons_mat)
+                
+
+            # Form the bounds of the constraints:
+            #    For odds/opp/strict these are 0 since they are equalities.
+            #    For the normalization constraints these are 1
+    #        cons_bounds = np.zeros(cons_mat.shape[0])
+    #        cons_bounds = np.ones(cons_mat.shape[0]) * slack
+    #        cons_bounds[-cons_norm.shape[0]:] = 1 # moved to inside slack if/else statement
+
+            if slack == 0:
+                # all constraints are equality constraints only
+                cons_mat = np.concatenate([cons_mat, cons_norm], axis=0)            
+                cons_bounds = np.ones(cons_mat.shape[0]) * slack
+                cons_bounds[-cons_norm.shape[0]:] = 1
+                self.opt = sp.optimize.linprog(c=loss_coefs,
+                                           bounds=[0, 1],
+                                           A_eq=cons_mat,
+                                           b_eq=cons_bounds)
+                                           #method='highs')
+                self.con_bounds = cons_bounds
+                self.cons = cons_mat
+            else:
+                # constraints for normalization are still equality, but
+                # constraints for equality across groups are relaxed (small inequalities allowed)
+                cons_norm_bounds = np.ones(cons_norm.shape[0]) 
+
+                # Have to account for abs value of the difference being within slack
+                # by adding a second set of constraints. AX < slack represents ax - bx < slack
+                # -AX < slack represents ax - bx > -slack
+                cons_ineq_bounds = np.ones(2 * cons_mat.shape[0]) * slack
+                abs_val_cons = np.concatenate([cons_mat, -cons_mat], axis=0)
+                self.opt = sp.optimize.linprog(c=loss_coefs,
+                                           bounds=[0, 1],
+                                           A_eq=cons_norm,
+                                           b_eq=cons_norm_bounds,
+                                           A_ub=abs_val_cons,
+                                           b_ub=cons_ineq_bounds)
+                                           #method='highs')
+                # tbh not sure if any of this really makes sense to do sense the
+                # attributes will vary based on the inputs-does anything actually
+                # need to access the bounds after running?
+                self.con_bounds = cons_norm_bounds
+                self.con_ineq_bounds = cons_ineq_bounds
+                self.con = abs_val_cons
+                self.con_norm = cons_norm_bounds
             
-            # Getting the new cp matrices
-            self.new_cp_mats = np.array([np.dot(self.cp_mats[i], self.m[i])
-                                         for i in range(self.n_groups)])
+            if self.opt.status == 0:
+                # Reshaping the solution
+                y_derived = self.opt.x.reshape([self.n_classes, 
+                                                self.n_classes, 
+                                                self.n_groups])
+                self.y_d = y_derived
+                W = np.einsum('ijk, jlk->ilk', 
+                              self.cp_mats_t.transpose((1, 0, 2)),  
+                              y_derived)
+                self.m = np.array([y_derived[:, :, i] 
+                                   for i in range(self.n_groups)])
+                
+                # Getting the new cp matrices
+                self.new_cp_mats = np.array([np.dot(self.cp_mats[i], self.m[i])
+                                             for i in range(self.n_groups)])
+                
+                # Calculating group-specific ROC scores from the new parameters
+                self.rocs = tools.parmat_to_roc(self.m,
+                                                self.p_vecs,
+                                                self.cp_mats)
+                self.loss = 1 - np.sum(self.p_vecs * self.rocs[:, :, 1])
+                self.macro_loss = 1 - np.mean(self.rocs[:, :, 1])
+                preds_as_probs = tools.cat_to_probs(self.__y,
+                                                    self.__a, 
+                                                    self.new_cp_mats)
+                self.brier_score = tools.brier_score(self.__y, 
+                                                     preds_as_probs)
+            else:
+                print('\nBalancing failed: Linear program is infeasible.\n')
+                self.m = np.nan
+                self.rocs = np.nan
+                self.loss = np.nan
+                self.macro_loss = np.nan
+            
+        else:
+            # Getting the predictions with cross validation
+            preds = tools.cv_predict(self.__y,
+                                     self.y_,
+                                     self.__a,
+                                     goal=goal,
+                                     loss=loss,
+                                     shuffle=shuffle,
+                                     seed=seed)
+            
+            # Resetting some class attributes
+            self.__y = preds.y.values
+            self.y_ = preds.y_.values
+            self.__a = preds.a.values
+            self.yt = preds.yt.values
+            
+            # Getting the new CP matrices for Y~
+            group_ids = [np.where(preds.a == g) for g in self.groups]
+            self.m = np.array([tools.cp_mat(self.y_[ids],
+                                            self.yt[ids])
+                               for ids in group_ids])
+            self.new_cp_mats = np.array([tools.cp_mat(self.__y[ids],
+                                                      self.yt[ids])
+                                         for ids in group_ids])
             
             # Calculating group-specific ROC scores from the new parameters
-            self.rocs = tools.parmat_to_roc(self.m,
-                                            self.p_vecs,
-                                            self.cp_mats)
+            self.rocs = np.array([tools.cpmat_to_roc(self.p_y_a[i],
+                                                     self.new_cp_mats[i])
+                                  for i in range(self.n_groups)])
             self.loss = 1 - np.sum(self.p_vecs * self.rocs[:, :, 1])
             self.macro_loss = 1 - np.mean(self.rocs[:, :, 1])
-            preds_as_probs = tools.cat_to_probs(self.__y,
+            preds_as_probs = tools.cat_to_probs(self.y_,
                                                 self.__a, 
-                                                self.new_cp_mats)
+                                                self.m)
             self.brier_score = tools.brier_score(self.__y, 
                                                  preds_as_probs)
-        else:
-            print('\nBalancing failed: Linear program is infeasible.\n')
-            self.m = np.nan
-            self.rocs = np.nan
-            self.loss = np.nan
-            self.macro_loss = np.nan
-        
+            
         if summary:
             self.summary(org=False)
-            
-        if return_optima:
-            return {'loss': self.theoretical_loss, 'roc': self.roc}
-
+    
     def get_0_1_loss_coefs(self):
         coefs = np.zeros((self.n_classes, self.n_classes, self.n_groups))
         for c in range(self.n_classes):
@@ -1096,7 +1129,8 @@ class MulticlassBalancer:
                loss='macro',
                round=4,
                summary=False,
-               binom=False):
+               cv=False,
+               n_folds=5):
         """Adjusts predictions to satisfy a fairness constraint.
         
         Parameters
@@ -1124,105 +1158,144 @@ class MulticlassBalancer:
         (optional) optima : dict
             The optimal loss and ROC coordinates after adjustment.    
         """
-        # Getting the costraint weights
-        self.constraints = [self.__get_constraints(self.p_vecs[i],
-                                                   self.p_a[i],
-                                                   self.cp_mats[i])
-                            for i in range(self.n_groups)]
-        
-        # Arranging the constraint weights by group comparisons
-        tpr_cons, fpr_cons, strict_cons, norm_cons = self.__pair_constraints(
-            self.constraints
-            )
-        
-        # First option is macro loss, or the sum of the unweighted
-        # conditional probabilities from above
-        if loss == 'macro':
-            off_loss = [[np.delete(a, i, 0).sum(0) 
-                         for i in range(self.n_classes)]
-                        for a in self.cp_mats]
-            self.obj = np.array(off_loss).flatten()
-            
-            '''
-            self.obj = -1 * self.cp_mats.flatten()
-            '''
-        
-        # Next option is weighted macro, which weights the conditional
-        # sums by the baseline class (not group) probabilities
-        elif loss == 'w_macro':
-            pass
-        
-        # And finally is micro, which weights each 
-        elif loss == 'micro':
-            u = np.array([[np.delete(a, i, 0)
-                           for i in range(self.n_classes)]
-                          for a in self.cp_mats])
-            p = np.array([[np.delete(a, i).reshape(-1, 1)
-                           for i in range(self.n_classes)]
-                          for a in self.p_vecs])
-            w = np.array([[p[i, j] * u[i, j]
-                           for j in range(self.n_classes)]
-                          for i in range(self.n_groups)])
-            self.w = w
-            self.obj = w.sum(2).flatten()
-        
-        # Normazliation bounds; used in all scenarios
-        norm_bounds = np.repeat(1, norm_cons.shape[0])
-        
-        # Choosing the constraint conditions
-        if 'odds' in goal:
-            con = np.concatenate([tpr_cons, fpr_cons, norm_cons])
-            eo_bounds = np.repeat(0, tpr_cons.shape[0] * 2)
-            con_bounds = np.concatenate([eo_bounds, norm_bounds])
-        
-        elif 'opportunity' in goal:
-            con = np.concatenate([tpr_cons, norm_cons])
-            tpr_bounds = np.repeat(0, tpr_cons.shape[0])
-            con_bounds = np.concatenate([tpr_bounds, norm_bounds])
-        
-        elif 'strict' in goal:
-            con = np.concatenate([strict_cons, norm_cons])
-            strict_bounds = np.repeat(0, strict_cons.shape[0])
-            con_bounds = np.concatenate([strict_bounds, norm_bounds])
-        
         self.goal = goal
-        self.con = con
-        self.con_bounds = con_bounds
         
-        # Running the optimization
-        self.opt = sp.optimize.linprog(c=self.obj,
-                                       bounds=[0, 1],
-                                       A_eq=con,
-                                       b_eq=con_bounds,
-                                       method='highs')
-                                       
-        
-        if self.opt.status == 0:
-            # Getting the Y~ matrices
-            self.m = tools.pars_to_cpmat(self.opt,
-                                         n_groups=self.n_groups,
-                                         n_classes=self.n_classes)
+        if not cv:
+            # Getting the costraint weights
+            self.constraints = [self.__get_constraints(self.p_vecs[i],
+                                                       self.p_a[i],
+                                                       self.cp_mats[i])
+                                for i in range(self.n_groups)]
             
-            # Getting the new cp matrices
-            self.new_cp_mats = np.array([np.dot(self.cp_mats[i], self.m[i])
-                                         for i in range(self.n_groups)])
+            # Arranging the constraint weights by group comparisons
+            tpr_cons, fpr_cons, strict_cons, norm_cons = self.__pair_constraints(
+                self.constraints
+                )
+            
+            # First option is macro loss, or the sum of the unweighted
+            # conditional probabilities from above
+            if loss == 'macro':
+                off_loss = [[np.delete(a, i, 0).sum(0) 
+                             for i in range(self.n_classes)]
+                            for a in self.cp_mats]
+                self.obj = np.array(off_loss).flatten()
+                
+                '''
+                self.obj = -1 * self.cp_mats.flatten()
+                '''
+            
+            # Next option is weighted macro, which weights the conditional
+            # sums by the baseline class (not group) probabilities
+            elif loss == 'w_macro':
+                pass
+            
+            # And finally is micro, which weights each 
+            elif loss == 'micro':
+                u = np.array([[np.delete(a, i, 0)
+                               for i in range(self.n_classes)]
+                              for a in self.cp_mats])
+                p = np.array([[np.delete(a, i).reshape(-1, 1)
+                               for i in range(self.n_classes)]
+                              for a in self.p_vecs])
+                w = np.array([[p[i, j] * u[i, j]
+                               for j in range(self.n_classes)]
+                              for i in range(self.n_groups)])
+                self.w = w
+                self.obj = w.sum(2).flatten()
+            
+            # Normazliation bounds; used in all scenarios
+            norm_bounds = np.repeat(1, norm_cons.shape[0])
+            
+            # Choosing the constraint conditions
+            if 'odds' in goal:
+                con = np.concatenate([tpr_cons, fpr_cons, norm_cons])
+                eo_bounds = np.repeat(0, tpr_cons.shape[0] * 2)
+                con_bounds = np.concatenate([eo_bounds, norm_bounds])
+            
+            elif 'opportunity' in goal:
+                con = np.concatenate([tpr_cons, norm_cons])
+                tpr_bounds = np.repeat(0, tpr_cons.shape[0])
+                con_bounds = np.concatenate([tpr_bounds, norm_bounds])
+            
+            elif 'strict' in goal:
+                con = np.concatenate([strict_cons, norm_cons])
+                strict_bounds = np.repeat(0, strict_cons.shape[0])
+                con_bounds = np.concatenate([strict_bounds, norm_bounds])
+            
+            self.con = con
+            self.con_bounds = con_bounds
+            
+            # Running the optimization
+            self.opt = sp.optimize.linprog(c=self.obj,
+                                           bounds=[0, 1],
+                                           A_eq=con,
+                                           b_eq=con_bounds,
+                                           method='highs')
+                                           
+            
+            if self.opt.status == 0:
+                # Getting the Y~ matrices
+                self.m = tools.pars_to_cpmat(self.opt,
+                                             n_groups=self.n_groups,
+                                             n_classes=self.n_classes)
+                
+                # Getting the new cp matrices
+                self.new_cp_mats = np.array([np.dot(self.cp_mats[i], self.m[i])
+                                             for i in range(self.n_groups)])
+                
+                # Calculating group-specific ROC scores from the new parameters
+                self.rocs = tools.parmat_to_roc(self.m,
+                                                self.p_vecs,
+                                                self.cp_mats)
+                self.loss = 1 - np.sum(self.p_vecs * self.rocs[:, :, 1])
+                self.macro_loss = 1 - np.mean(self.rocs[:, :, 1])
+                preds_as_probs = tools.cat_to_probs(self.y_,
+                                                    self.__a, 
+                                                    self.m)
+                self.brier_score = tools.brier_score(self.__y, 
+                                                     preds_as_probs)
+            else:
+                print('\nBalancing failed: Linear program is infeasible.\n')
+                self.rocs = np.nan
+                self.loss = np.nan
+                self.macro_loss = np.nan
+        
+        else:
+            # Getting the predictions with cross validation
+            preds = tools.cv_predict(self.__y,
+                                     self.y_,
+                                     self.__a,
+                                     goal=goal,
+                                     loss=loss,
+                                     shuffle=shuffle,
+                                     seed=seed)
+            
+            # Resetting some class attributes
+            self.__y = preds.y.values
+            self.y_ = preds.y_.values
+            self.__a = preds.a.values
+            self.yt = preds.yt.values
+            
+            # Getting the new CP matrices for Y~
+            group_ids = [np.where(preds.a == g) for g in self.groups]
+            self.m = np.array([tools.cp_mat(self.y_[ids],
+                                            self.yt[ids])
+                               for ids in group_ids])
+            self.new_cp_mats = np.array([tools.cp_mat(self.__y[ids],
+                                                      self.yt[ids])
+                                         for ids in group_ids])
             
             # Calculating group-specific ROC scores from the new parameters
-            self.rocs = tools.parmat_to_roc(self.m,
-                                            self.p_vecs,
-                                            self.cp_mats)
+            self.rocs = np.array([tools.cpmat_to_roc(self.p_y_a[i],
+                                                     self.new_cp_mats[i])
+                                  for i in range(self.n_groups)])
             self.loss = 1 - np.sum(self.p_vecs * self.rocs[:, :, 1])
             self.macro_loss = 1 - np.mean(self.rocs[:, :, 1])
-            preds_as_probs = tools.cat_to_probs(self.__y,
+            preds_as_probs = tools.cat_to_probs(self.y_,
                                                 self.__a, 
-                                                self.new_cp_mats)
+                                                self.m)
             self.brier_score = tools.brier_score(self.__y, 
                                                  preds_as_probs)
-        else:
-            print('\nBalancing failed: Linear program is infeasible.\n')
-            self.rocs = np.nan
-            self.loss = np.nan
-            self.macro_loss = np.nan
             
         if summary:
             self.summary(org=False)

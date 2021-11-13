@@ -7,7 +7,7 @@ from sklearn.metrics import confusion_matrix
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score, average_precision_score
 from sklearn.metrics import accuracy_score, confusion_matrix
-from sklearn.model_selection import StratifiedKFold, cross_val_predict
+from sklearn.model_selection import KFold, cross_val_predict
 from matplotlib import pyplot as plt
 from scipy.stats import binom, chi2, norm, percentileofscore
 from itertools import combinations
@@ -1477,3 +1477,33 @@ def fd_plot(grid,
         plt.show()
     
     return
+
+
+def cv_predict(y, y_, a,
+               goal='strict',
+               loss='macro',
+               n_folds=5,
+               stratify=None,
+               shuffle=False,
+               seed=None):
+    kf = KFold(n_splits=n_folds,
+               shuffle=shuffle,
+               random_state=seed)
+    out = []
+    
+    for train, test in kf.split(y):
+        b = balancers.MulticlassBalancer(y[train],
+                                         y_[train],
+                                         a[train])
+        b.adjust_new(goal=goal, loss=loss)
+        preds = b.predict(y_[test], a[test])
+        df = pd.DataFrame([y[test],
+                           y_[test],
+                           a[test],
+                           preds]).transpose()
+        df.columns = ['y', 'y_', 'a', 'yt']
+        out.append(df)
+    
+    return pd.concat(out, axis=0)
+
+        
