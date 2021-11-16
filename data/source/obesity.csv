@@ -9,7 +9,7 @@ Female,23.0,1.5,55.0,yes,yes,3.0,3.0,Sometimes,no,2.0,no,1.0,0.0,Sometimes,Motor
 Male,22.0,1.64,53.0,no,no,2.0,3.0,Sometimes,no,2.0,no,3.0,0.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Male,24.0,1.78,64.0,yes,yes,3.0,3.0,Sometimes,no,2.0,no,1.0,1.0,Frequently,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Overweight_Level_II,Male
 Male,22.0,1.72,68.0,yes,yes,2.0,3.0,Sometimes,no,2.0,no,1.0,1.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Obesity_Type_I,Male
-Male,26.0,1.85,105.0,yes,yes,3.0,3.0,Frequently,no,3.0,no,2.0,2.0,Sometimes,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Insufficient_Weight,Male
+Male,26.0,1.85,105.0,yes,yes,3.0,3.0,Frequently,no,3.0,no,2.0,2.0,Sometimes,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Normal_Weight,Male
 Female,21.0,1.72,80.0,yes,yes,2.0,3.0,Frequently,no,2.0,yes,2.0,1.0,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Normal_Weight,Female
 Male,22.0,1.65,56.0,no,no,3.0,3.0,Sometimes,no,3.0,no,2.0,0.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Male,41.0,1.8,99.0,no,yes,2.0,3.0,Sometimes,no,2.0,no,2.0,1.0,Frequently,Automobile,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Overweight_Level_I,Male
@@ -37,7 +37,7 @@ Male,22.0,1.65,62.0,no,yes,2.0,4.0,Frequently,no,2.0,no,2.0,0.0,Sometimes,Public
 Female,21.0,1.5,65.0,yes,no,2.0,3.0,Sometimes,no,2.0,no,2.0,2.0,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Female
 Female,22.0,1.56,49.0,no,yes,2.0,3.0,Sometimes,no,1.0,yes,2.0,0.0,no,Walking,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
 Female,21.0,1.6,48.0,no,yes,2.0,3.0,Sometimes,no,1.0,no,1.0,0.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
-Male,23.0,1.65,67.0,yes,yes,2.0,3.0,Sometimes,no,2.0,no,1.0,1.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Overweight_Level_II,Male
+Male,23.0,1.65,67.0,yes,yes,2.0,3.0,Sometimes,no,2.0,no,1.0,1.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Obesity_Type_I,Male
 Female,21.0,1.75,88.0,yes,yes,2.0,3.0,Sometimes,no,3.0,no,3.0,0.0,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_I,Female
 Female,21.0,1.67,75.0,yes,yes,2.0,3.0,Sometimes,no,2.0,no,1.0,0.0,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Female
 Male,23.0,1.68,60.0,no,no,2.0,4.0,Frequently,no,2.0,no,0.0,0.0,no,Walking,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
@@ -65,13 +65,13 @@ Male,22.0,1.67,62.0,no,yes,2.0,1.0,no,no,2.0,no,0.0,0.0,Sometimes,Public_Transpo
 Male,22.0,1.68,55.0,yes,yes,2.0,3.0,Sometimes,no,2.0,no,0.0,2.0,Sometimes,Automobile,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Female,21.0,1.66,57.0,yes,yes,2.0,3.0,Frequently,no,1.0,no,1.0,1.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Insufficient_Weight,Female
 Female,21.0,1.62,69.0,yes,yes,1.0,3.0,Frequently,no,2.0,no,0.0,1.0,no,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Insufficient_Weight,Female
-Male,23.0,1.8,90.0,yes,yes,1.0,3.0,Always,no,2.0,no,0.0,2.0,Frequently,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
-Male,23.0,1.65,95.0,yes,yes,2.0,3.0,Always,no,2.0,no,0.0,1.0,Frequently,Automobile,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Male
+Male,23.0,1.8,90.0,yes,yes,1.0,3.0,Always,no,2.0,no,0.0,2.0,Frequently,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Obesity_Type_I,Male
+Male,23.0,1.65,95.0,yes,yes,2.0,3.0,Always,no,2.0,no,0.0,1.0,Frequently,Automobile,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Overweight_Level_I,Male
 Male,23.0,1.8,60.0,yes,no,2.0,3.0,no,no,3.0,no,0.0,1.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Female,23.0,1.65,80.0,yes,yes,2.0,3.0,Always,no,2.0,no,0.0,2.0,no,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Normal_Weight,Female
 Female,22.0,1.67,50.0,yes,no,3.0,3.0,no,no,3.0,yes,2.0,1.0,Sometimes,Public_Transportation,Insufficient_Weight,Insufficient_Weight,Insufficient_Weight,Normal_Weight,Female
 Female,24.0,1.65,60.0,yes,no,2.0,3.0,Sometimes,no,3.0,yes,1.0,0.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Insufficient_Weight,Female
-Male,19.0,1.85,65.0,yes,no,2.0,3.0,Sometimes,no,3.0,no,2.0,1.0,Sometimes,Bike,Normal_Weight,Normal_Weight,Normal_Weight,Overweight_Level_II,Male
+Male,19.0,1.85,65.0,yes,no,2.0,3.0,Sometimes,no,3.0,no,2.0,1.0,Sometimes,Bike,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Male,24.0,1.7,85.0,yes,yes,2.0,3.0,Frequently,no,3.0,no,0.0,1.0,Frequently,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
 Female,23.0,1.63,45.0,yes,no,3.0,3.0,Sometimes,no,3.0,yes,2.0,0.0,no,Public_Transportation,Insufficient_Weight,Insufficient_Weight,Insufficient_Weight,Normal_Weight,Female
 Female,24.0,1.6,45.0,yes,no,2.0,3.0,no,no,2.0,no,1.0,0.0,no,Public_Transportation,Insufficient_Weight,Insufficient_Weight,Insufficient_Weight,Normal_Weight,Female
@@ -107,7 +107,7 @@ Female,25.0,1.57,55.0,no,yes,2.0,1.0,Sometimes,no,2.0,no,2.0,0.0,Sometimes,Publi
 Male,22.0,1.88,90.0,yes,yes,2.0,3.0,Always,no,1.0,no,0.0,1.0,Sometimes,Automobile,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Normal_Weight,Male
 Male,22.0,1.75,95.0,yes,no,2.0,3.0,Sometimes,no,3.0,no,3.0,2.0,no,Walking,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Overweight_Level_II,Male
 Female,21.0,1.65,88.0,yes,yes,3.0,1.0,Sometimes,no,3.0,no,2.0,1.0,no,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Female
-Male,21.0,1.75,75.0,yes,yes,3.0,3.0,Sometimes,no,2.0,no,0.0,1.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Overweight_Level_I,Male
+Male,21.0,1.75,75.0,yes,yes,3.0,3.0,Sometimes,no,2.0,no,0.0,1.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Female,22.0,1.58,58.0,yes,yes,2.0,1.0,Sometimes,no,1.0,no,0.0,0.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Obesity_Type_I,Female
 Female,18.0,1.56,51.0,yes,yes,2.0,4.0,Frequently,no,2.0,no,1.0,0.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
 Female,22.0,1.5,49.0,yes,no,2.0,1.0,Sometimes,no,2.0,no,3.0,0.0,no,Walking,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
@@ -115,7 +115,7 @@ Female,19.0,1.61,62.0,yes,yes,3.0,1.0,Frequently,no,2.0,no,1.0,0.0,Frequently,Pu
 Female,17.0,1.75,57.0,yes,yes,3.0,3.0,Frequently,no,2.0,no,0.0,1.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Insufficient_Weight,Female
 Female,15.0,1.65,86.0,yes,yes,3.0,3.0,Sometimes,no,1.0,no,3.0,2.0,no,Walking,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Normal_Weight,Female
 Female,17.0,1.7,85.0,yes,no,2.0,3.0,Frequently,no,2.0,no,1.0,1.0,no,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Normal_Weight,Female
-Male,23.0,1.62,53.0,yes,yes,2.0,3.0,Sometimes,no,2.0,no,1.0,1.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
+Male,23.0,1.62,53.0,yes,yes,2.0,3.0,Sometimes,no,2.0,no,1.0,1.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Obesity_Type_I,Male
 Female,19.0,1.63,76.0,yes,no,3.0,3.0,Frequently,yes,3.0,no,2.0,1.0,Sometimes,Automobile,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Normal_Weight,Female
 Female,23.0,1.67,75.0,yes,yes,2.0,3.0,Frequently,yes,2.0,no,0.0,2.0,no,Walking,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Insufficient_Weight,Female
 Male,23.0,1.87,95.0,yes,yes,1.0,3.0,Frequently,no,2.0,no,0.0,2.0,Frequently,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
@@ -174,7 +174,7 @@ Male,21.0,1.62,70.0,no,yes,2.0,1.0,no,no,3.0,no,1.0,0.0,Sometimes,Public_Transpo
 Female,38.0,1.64,59.8,yes,yes,2.0,3.0,Sometimes,no,2.0,no,2.0,0.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Obesity_Type_I,Female
 Female,18.0,1.57,48.0,yes,yes,3.0,1.0,Always,no,1.0,no,1.0,0.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
 Male,22.0,1.84,84.0,yes,yes,3.0,3.0,Frequently,no,2.0,yes,3.0,0.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
-Male,26.0,1.91,84.0,yes,yes,3.0,3.0,Frequently,yes,2.0,no,2.0,2.0,Frequently,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
+Male,26.0,1.91,84.0,yes,yes,3.0,3.0,Frequently,yes,2.0,no,2.0,2.0,Frequently,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Obesity_Type_I,Male
 Male,21.0,1.62,70.0,no,yes,2.0,1.0,no,no,3.0,no,1.0,0.0,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Male
 Female,18.0,1.58,48.0,no,yes,2.0,3.0,Sometimes,no,2.0,no,1.0,0.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
 Female,23.0,1.68,67.0,yes,yes,2.0,3.0,Frequently,no,1.0,no,0.0,0.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
@@ -192,7 +192,7 @@ Male,20.0,1.83,85.0,yes,no,3.0,3.0,Sometimes,no,3.0,yes,3.0,0.0,Sometimes,Automo
 Male,20.0,1.78,68.0,no,no,2.0,1.0,Frequently,no,3.0,yes,2.0,1.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Female,23.0,1.6,83.0,yes,yes,3.0,3.0,Frequently,no,3.0,no,3.0,0.0,no,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Insufficient_Weight,Female
 Male,19.0,1.8,85.0,yes,yes,3.0,3.0,Sometimes,no,2.0,no,1.0,1.0,Sometimes,Walking,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Normal_Weight,Male
-Male,22.0,1.75,74.0,yes,no,2.0,3.0,Sometimes,no,2.0,no,1.0,2.0,Sometimes,Bike,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
+Male,22.0,1.75,74.0,yes,no,2.0,3.0,Sometimes,no,2.0,no,1.0,2.0,Sometimes,Bike,Normal_Weight,Normal_Weight,Normal_Weight,Overweight_Level_II,Male
 Female,18.0,1.59,40.0,yes,yes,2.0,1.0,Frequently,no,1.0,no,0.0,2.0,no,Public_Transportation,Insufficient_Weight,Insufficient_Weight,Insufficient_Weight,Normal_Weight,Female
 Female,23.0,1.66,60.0,yes,yes,2.0,1.0,Sometimes,no,1.0,no,1.0,1.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Obesity_Type_I,Female
 Female,23.0,1.63,83.0,yes,no,3.0,1.0,Sometimes,yes,3.0,no,1.0,2.0,Sometimes,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Overweight_Level_II,Female
@@ -222,7 +222,7 @@ Female,20.0,1.6,50.0,no,yes,2.0,3.0,Sometimes,no,1.0,no,0.0,1.0,no,Automobile,No
 Female,24.0,1.62,58.0,no,yes,3.0,3.0,Sometimes,no,2.0,no,1.0,1.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Overweight_Level_I,Female
 Female,40.0,1.68,80.0,no,no,3.0,3.0,Sometimes,no,3.0,no,0.0,0.0,no,Automobile,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_I,Female
 Male,20.0,1.9,91.0,yes,yes,3.0,4.0,Sometimes,no,3.0,no,2.0,0.0,Sometimes,Walking,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Male
-Female,21.0,1.63,66.0,yes,yes,3.0,1.0,Sometimes,yes,3.0,no,0.0,0.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Overweight_Level_I,Female
+Female,21.0,1.63,66.0,yes,yes,3.0,1.0,Sometimes,yes,3.0,no,0.0,0.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Obesity_Type_I,Female
 Female,51.0,1.59,50.0,yes,no,3.0,3.0,Sometimes,yes,3.0,yes,2.0,0.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
 Female,34.0,1.68,77.0,yes,no,3.0,1.0,Sometimes,no,2.0,no,1.0,0.0,Sometimes,Automobile,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_I,Female
 Female,19.0,1.59,49.0,yes,yes,2.0,1.0,no,no,2.0,no,2.0,0.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
@@ -261,7 +261,7 @@ Female,39.0,1.65,50.0,no,yes,3.0,4.0,Frequently,no,2.0,no,0.0,0.0,Sometimes,Publ
 Male,38.0,1.7,78.0,no,yes,3.0,3.0,Frequently,no,2.0,no,0.0,0.0,Frequently,Automobile,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Normal_Weight,Male
 Male,17.0,1.67,60.0,no,no,2.0,4.0,Always,no,2.0,no,0.0,2.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Male,23.0,1.72,66.0,yes,yes,2.0,3.0,Sometimes,no,2.0,no,0.0,1.0,Sometimes,Walking,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
-Male,23.0,1.82,107.0,no,yes,2.0,3.0,Sometimes,no,3.0,no,0.0,1.0,Sometimes,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Normal_Weight,Male
+Male,23.0,1.82,107.0,no,yes,2.0,3.0,Sometimes,no,3.0,no,0.0,1.0,Sometimes,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Overweight_Level_I,Male
 Female,19.0,1.5,50.0,no,yes,2.0,3.0,Frequently,no,1.0,no,0.0,2.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Insufficient_Weight,Female
 Male,18.0,1.7,60.0,no,yes,2.0,3.0,Sometimes,no,2.0,no,2.0,1.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Male,25.0,1.71,71.0,yes,yes,2.0,3.0,Frequently,no,2.0,no,0.0,0.0,Sometimes,Motorbike,Normal_Weight,Normal_Weight,Normal_Weight,Overweight_Level_II,Male
@@ -276,7 +276,7 @@ Male,18.0,1.7,55.0,yes,yes,2.0,3.0,Frequently,no,2.0,no,0.0,0.0,Sometimes,Public
 Female,18.0,1.62,55.0,yes,yes,2.0,3.0,Frequently,no,1.0,no,1.0,1.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
 Male,17.0,1.69,60.0,no,no,2.0,3.0,Sometimes,no,3.0,no,2.0,1.0,Sometimes,Walking,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Male,20.0,1.77,70.0,yes,yes,1.0,1.0,Sometimes,no,2.0,no,1.0,1.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Overweight_Level_II,Male
-Male,21.0,1.79,105.0,yes,yes,2.0,3.0,Always,no,1.0,no,0.0,0.0,Sometimes,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Normal_Weight,Male
+Male,21.0,1.79,105.0,yes,yes,2.0,3.0,Always,no,1.0,no,0.0,0.0,Sometimes,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Male
 Female,21.0,1.6,61.0,no,yes,2.0,3.0,Sometimes,no,1.0,no,1.0,1.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
 Female,18.0,1.6,58.0,yes,yes,2.0,3.0,Sometimes,no,3.0,no,3.0,0.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Obesity_Type_I,Female
 Female,17.0,1.56,51.0,no,yes,3.0,3.0,Sometimes,no,1.0,no,0.0,2.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
@@ -296,7 +296,7 @@ Male,18.0,1.72,55.0,no,yes,2.0,4.0,Sometimes,no,2.0,no,2.0,1.0,Sometimes,Public_
 Male,16.0,1.84,45.0,yes,yes,3.0,3.0,Always,no,3.0,no,3.0,2.0,Sometimes,Walking,Insufficient_Weight,Insufficient_Weight,Insufficient_Weight,Normal_Weight,Male
 Female,16.0,1.57,49.0,no,yes,2.0,4.0,Always,no,2.0,no,0.0,1.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
 Male,20.0,1.8,85.0,yes,no,2.0,3.0,Sometimes,no,3.0,no,2.0,1.0,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_II,Male
-Female,24.0,1.56,60.0,yes,yes,1.0,3.0,Always,no,2.0,no,0.0,2.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Overweight_Level_I,Female
+Female,24.0,1.56,60.0,yes,yes,1.0,3.0,Always,no,2.0,no,0.0,2.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Overweight_Level_II,Female
 Female,23.0,1.59,48.0,yes,yes,2.0,1.0,Frequently,no,1.0,no,0.0,2.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
 Male,20.0,1.8,75.0,no,yes,3.0,4.0,Always,no,3.0,no,2.0,0.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Female,16.0,1.66,58.0,no,no,2.0,1.0,Sometimes,no,1.0,no,0.0,1.0,no,Walking,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
@@ -308,7 +308,7 @@ Female,26.0,1.65,63.0,no,yes,3.0,3.0,Sometimes,no,1.0,no,1.0,0.0,no,Walking,Norm
 Male,26.0,1.7,72.0,no,yes,2.0,3.0,Always,no,2.0,no,0.0,0.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Male,38.0,1.75,75.0,yes,no,3.0,3.0,Frequently,no,1.0,no,2.0,1.0,no,Automobile,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Male,18.0,1.75,70.0,no,yes,3.0,4.0,Sometimes,no,2.0,no,1.0,1.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
-Female,25.0,1.56,45.0,no,yes,2.0,3.0,Sometimes,no,1.0,no,0.0,0.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
+Female,25.0,1.56,45.0,no,yes,2.0,3.0,Sometimes,no,1.0,no,0.0,0.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Overweight_Level_I,Female
 Female,27.0,1.55,63.0,no,yes,2.0,3.0,Sometimes,no,1.0,no,0.0,1.0,Sometimes,Automobile,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Female
 Male,21.0,1.67,67.0,yes,yes,3.0,1.0,Always,no,2.0,no,1.0,1.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Male,38.0,1.75,75.0,yes,no,3.0,3.0,Frequently,no,1.0,no,3.0,1.0,no,Automobile,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
@@ -325,7 +325,7 @@ Male,17.0,1.74,56.0,yes,yes,2.0,3.0,Sometimes,no,2.0,no,2.0,1.0,no,Public_Transp
 Male,27.0,1.85,75.0,yes,yes,2.0,1.0,Sometimes,no,2.0,no,1.0,0.0,no,Walking,Normal_Weight,Normal_Weight,Normal_Weight,Overweight_Level_II,Male
 Female,23.0,1.7,56.0,no,no,3.0,4.0,Always,no,3.0,yes,3.0,0.0,no,Automobile,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
 Female,18.0,1.45,53.0,no,yes,2.0,3.0,Frequently,no,2.0,yes,1.0,2.0,Frequently,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Normal_Weight,Female
-Male,19.0,1.7,50.0,no,yes,1.0,4.0,Frequently,no,1.0,no,2.0,1.0,Sometimes,Public_Transportation,Insufficient_Weight,Insufficient_Weight,Insufficient_Weight,Insufficient_Weight,Male
+Male,19.0,1.7,50.0,no,yes,1.0,4.0,Frequently,no,1.0,no,2.0,1.0,Sometimes,Public_Transportation,Insufficient_Weight,Insufficient_Weight,Insufficient_Weight,Normal_Weight,Male
 Male,20.0,1.7,65.0,no,yes,2.0,3.0,Sometimes,no,2.0,no,0.0,1.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Male,18.0,1.78,64.4,yes,yes,3.0,3.0,Frequently,no,2.0,no,3.0,2.0,no,Walking,Normal_Weight,Normal_Weight,Normal_Weight,Insufficient_Weight,Male
 Female,17.0,1.6,65.0,no,yes,3.0,1.0,Sometimes,no,2.0,yes,1.0,2.0,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Female
@@ -344,7 +344,7 @@ Female,26.0,1.65,60.0,no,no,3.0,4.0,Always,no,2.0,no,2.0,0.0,no,Walking,Normal_W
 Female,17.0,1.6,53.0,no,yes,1.0,3.0,Sometimes,no,1.0,no,2.0,2.0,Sometimes,Walking,Normal_Weight,Normal_Weight,Normal_Weight,Insufficient_Weight,Female
 Female,24.0,1.6,51.0,yes,yes,1.0,3.0,Sometimes,no,2.0,no,0.0,1.0,Sometimes,Automobile,Normal_Weight,Normal_Weight,Normal_Weight,Overweight_Level_I,Female
 Female,17.0,1.6,59.0,no,yes,2.0,3.0,Sometimes,no,2.0,no,1.0,2.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
-Female,27.0,1.55,62.0,no,yes,3.0,1.0,Sometimes,no,1.0,no,1.0,0.0,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Female
+Female,27.0,1.55,62.0,no,yes,3.0,1.0,Sometimes,no,1.0,no,1.0,0.0,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Normal_Weight,Female
 Male,17.0,1.9,60.0,no,no,3.0,3.0,Sometimes,no,2.0,no,3.0,1.0,no,Walking,Insufficient_Weight,Insufficient_Weight,Insufficient_Weight,Normal_Weight,Male
 Female,17.0,1.7,56.0,yes,yes,1.0,3.0,Sometimes,no,1.0,no,1.0,1.0,no,Automobile,Normal_Weight,Normal_Weight,Normal_Weight,Obesity_Type_I,Female
 Female,33.0,1.56,48.0,yes,no,2.0,3.0,Sometimes,no,2.0,no,1.0,0.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Overweight_Level_II,Female
@@ -367,7 +367,7 @@ Male,41.0,1.8,92.0,yes,yes,2.0,1.0,Frequently,no,3.0,no,1.0,0.0,Sometimes,Automo
 Female,36.0,1.58,60.0,yes,no,3.0,3.0,Sometimes,no,1.0,no,2.0,0.0,Sometimes,Automobile,Normal_Weight,Normal_Weight,Normal_Weight,Overweight_Level_I,Female
 Male,18.0,1.76,68.0,no,no,2.0,4.0,Frequently,no,2.0,no,1.0,1.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Male,18.0,1.73,70.0,no,yes,3.0,3.0,Frequently,no,1.0,no,2.0,1.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
-Male,17.0,1.7,70.0,yes,yes,3.0,3.0,Sometimes,no,2.0,no,0.0,2.0,Sometimes,Walking,Normal_Weight,Normal_Weight,Normal_Weight,Insufficient_Weight,Male
+Male,17.0,1.7,70.0,yes,yes,3.0,3.0,Sometimes,no,2.0,no,0.0,2.0,Sometimes,Walking,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Male,25.0,1.7,83.0,no,yes,3.0,3.0,Sometimes,no,3.0,yes,3.0,0.0,no,Motorbike,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_I,Male
 Male,21.0,1.8,75.0,yes,yes,3.0,3.0,Frequently,no,1.0,no,2.0,0.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Female,29.0,1.6,56.0,yes,no,2.0,3.0,Frequently,no,1.0,no,0.0,1.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
@@ -400,7 +400,7 @@ Male,20.0,1.83,66.0,no,no,2.0,3.0,Sometimes,no,2.0,no,1.0,1.0,no,Public_Transpor
 Female,20.0,1.6,65.0,no,no,3.0,3.0,Sometimes,no,2.0,yes,0.0,0.0,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Female
 Male,33.0,1.85,85.0,no,yes,2.0,3.0,Frequently,no,2.0,no,1.0,0.0,Sometimes,Automobile,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Male,33.0,1.75,85.0,no,no,2.0,3.0,Sometimes,no,2.0,yes,1.0,0.0,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Normal_Weight,Male
-Male,33.0,1.83,113.0,yes,yes,2.0,1.0,Always,no,2.0,no,1.0,2.0,Frequently,Automobile,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Male
+Male,33.0,1.83,113.0,yes,yes,2.0,1.0,Always,no,2.0,no,1.0,2.0,Frequently,Automobile,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Overweight_Level_II,Male
 Male,14.0,1.71,72.0,yes,yes,3.0,3.0,Sometimes,no,3.0,no,2.0,1.0,no,Walking,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Male,34.0,1.84,88.0,no,yes,3.0,3.0,Sometimes,no,1.0,yes,2.0,0.0,no,Automobile,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Male
 Male,18.0,1.77,87.0,yes,yes,3.0,3.0,Sometimes,no,2.0,no,1.0,1.0,Frequently,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_I,Male
@@ -425,9 +425,9 @@ Female,19.0,1.76,80.0,yes,yes,2.0,1.0,Sometimes,no,3.0,no,3.0,1.0,no,Public_Tran
 Female,18.0,1.56,55.0,no,yes,2.0,3.0,Sometimes,no,1.0,no,0.0,0.0,Frequently,Automobile,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
 Female,18.0,1.6,56.0,yes,yes,2.0,1.0,Always,no,2.0,no,1.0,0.0,Sometimes,Walking,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
 Female,19.0,1.67,64.0,no,yes,3.0,3.0,Sometimes,no,2.0,no,2.0,1.0,Sometimes,Automobile,Normal_Weight,Normal_Weight,Normal_Weight,Insufficient_Weight,Female
-Female,19.0,1.6,60.0,no,yes,2.0,3.0,Frequently,no,2.0,no,0.0,1.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
+Female,19.0,1.6,60.0,no,yes,2.0,3.0,Frequently,no,2.0,no,0.0,1.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Insufficient_Weight,Female
 Female,18.0,1.55,56.0,no,yes,2.0,3.0,Sometimes,no,1.0,no,0.0,0.0,no,Automobile,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
-Female,18.0,1.55,50.0,yes,yes,3.0,3.0,Frequently,no,1.0,no,1.0,2.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Insufficient_Weight,Female
+Female,18.0,1.55,50.0,yes,yes,3.0,3.0,Frequently,no,1.0,no,1.0,2.0,no,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Female
 Male,26.0,1.72,65.0,yes,yes,2.0,3.0,Sometimes,no,2.0,no,0.0,1.0,Sometimes,Walking,Normal_Weight,Normal_Weight,Normal_Weight,Normal_Weight,Male
 Male,18.0,1.72,53.0,yes,yes,2.0,3.0,Sometimes,no,2.0,no,0.0,2.0,Sometimes,Public_Transportation,Insufficient_Weight,Insufficient_Weight,Insufficient_Weight,Insufficient_Weight,Male
 Male,19.0,1.7,60.0,yes,yes,2.0,1.0,Sometimes,no,2.0,no,2.0,0.0,Sometimes,Public_Transportation,Normal_Weight,Normal_Weight,Normal_Weight,Overweight_Level_I,Male
@@ -752,7 +752,7 @@ Male,20.0,1.831357,89.652557,yes,yes,2.555401,3.292386,Sometimes,no,3.0,no,2.0,0
 Female,21.81119,1.6,66.401407,yes,yes,2.108711,3.0,Sometimes,no,2.746197,no,1.910432,0.0,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Female
 Female,21.0,1.754813,77.929204,yes,yes,2.915279,1.104642,Sometimes,no,1.530046,no,1.360635,0.0,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Female
 Male,18.128206,1.778447,80.273807,yes,yes,1.570089,3.0,Sometimes,no,2.0,no,2.707882,0.0,no,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Obesity_Type_I,Male
-Male,21.0,1.709561,75.0,yes,yes,2.0,3.0,Sometimes,no,1.636326,no,1.0,0.0,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Obesity_Type_I,Male
+Male,21.0,1.709561,75.0,yes,yes,2.0,3.0,Sometimes,no,1.636326,no,1.0,0.0,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Male
 Female,29.08107,1.674568,71.602622,yes,yes,2.0,3.0,Sometimes,no,1.701835,no,1.682271,0.0,Sometimes,Automobile,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Female
 Male,26.358919,1.755317,82.228794,yes,yes,1.94313,3.559841,Sometimes,no,2.367996,no,0.23553,0.879977,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Male
 Male,22.717249,1.708071,75.0,yes,yes,2.714447,3.0,Sometimes,no,3.0,no,1.096818,1.89388,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Male
@@ -818,7 +818,7 @@ Male,26.0,1.745033,80.0,yes,yes,2.217267,1.193589,Sometimes,no,2.0,no,2.0,0.0,So
 Male,19.789291,1.820643,85.0,yes,yes,3.0,3.0,Sometimes,no,2.759246,no,1.763277,0.453314,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Male
 Male,19.895877,1.80733,85.073801,yes,yes,2.801514,3.0,Sometimes,no,2.734782,no,2.207881,0.143675,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Male
 Male,19.693804,1.8,85.0,yes,yes,2.188722,3.0,Sometimes,no,2.721356,no,1.528968,1.0,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Male
-Male,19.226314,1.814255,85.255631,yes,yes,2.971351,3.390143,Sometimes,no,2.133767,no,2.318492,0.678618,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Male
+Male,19.226314,1.814255,85.255631,yes,yes,2.971351,3.390143,Sometimes,no,2.133767,no,2.318492,0.678618,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_II,Male
 Male,21.652229,1.700181,75.057177,yes,yes,2.086093,3.546352,Sometimes,no,2.081121,no,1.993666,0.673835,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Insufficient_Weight,Male
 Female,21.687409,1.604697,68.016472,yes,yes,1.901611,3.266501,no,no,2.926995,no,0.985872,0.307982,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Female
 Female,21.455463,1.611,68.107866,yes,yes,1.977298,3.554974,no,no,2.217957,no,0.97812,0.459759,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Female
@@ -857,7 +857,7 @@ Female,18.0,1.647971,68.818893,yes,yes,2.0,1.411685,Sometimes,no,1.859089,no,0.0
 Female,18.83919,1.624831,69.975607,yes,yes,2.253998,2.752318,Sometimes,no,2.328331,no,0.815509,0.024088,no,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Obesity_Type_I,Female
 Female,19.726522,1.508267,61.10403,no,yes,2.778079,3.0,Sometimes,no,1.696691,yes,0.94224,0.879925,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Female
 Female,18.947102,1.518917,60.267427,no,yes,2.838037,2.737571,Sometimes,no,1.144467,yes,0.753782,1.286844,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Female
-Female,17.781183,1.6,65.0,yes,yes,3.0,2.973504,Sometimes,no,2.0,yes,0.178976,0.166076,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Obesity_Type_I,Female
+Female,17.781183,1.6,65.0,yes,yes,3.0,2.973504,Sometimes,no,2.0,yes,0.178976,0.166076,Sometimes,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Female
 Male,33.100581,1.838791,87.85785,no,yes,2.814453,2.608055,Sometimes,no,1.85916,no,2.0,0.516084,no,Automobile,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Male
 Female,33.251015,1.730379,75.920519,yes,yes,2.013782,2.625942,Sometimes,no,1.045586,no,0.553305,0.480214,Sometimes,Automobile,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Female
 Female,18.985119,1.759117,80.0,yes,yes,2.0,1.411808,Sometimes,no,2.651194,no,2.878414,0.953841,no,Public_Transportation,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Overweight_Level_I,Female
@@ -973,7 +973,7 @@ Female,20.634694,1.568188,67.904023,yes,no,2.512719,3.0,Sometimes,no,1.131169,no
 Male,22.052152,1.792527,89.994415,yes,yes,1.771693,1.890213,Sometimes,no,2.0,no,0.0,1.36595,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
 Male,22.869778,1.795311,89.868784,yes,yes,1.57223,1.888067,Sometimes,no,2.0,no,0.0,0.552498,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
 Female,22.909992,1.700038,80.0,yes,yes,2.0,3.0,Sometimes,no,2.0,no,0.973114,1.540298,no,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Female
-Female,23.0,1.668649,80.458343,yes,yes,2.0,2.256119,Sometimes,no,1.142873,no,0.807076,1.611271,no,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Female
+Female,23.0,1.668649,80.458343,yes,yes,2.0,2.256119,Sometimes,no,1.142873,no,0.807076,1.611271,no,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Obesity_Type_I,Female
 Male,24.679807,1.7,84.687554,yes,yes,2.0,3.0,Sometimes,no,2.020424,no,0.0,1.0,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
 Male,23.884212,1.713825,83.952968,yes,yes,2.0,2.6648,Sometimes,no,1.810738,no,0.80989,1.0,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
 Female,25.461411,1.7,78.055968,yes,yes,2.661556,3.0,Sometimes,no,3.0,no,0.55181,0.658783,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Female
@@ -985,7 +985,7 @@ Female,19.027574,1.659877,77.272652,yes,yes,2.061461,2.812283,Sometimes,no,3.0,n
 Male,25.632447,1.836943,96.192662,yes,yes,1.317729,2.278652,Sometimes,no,2.0,no,1.80674,1.93977,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
 Male,22.94313,1.819614,93.086419,yes,yes,1.882235,1.240046,Sometimes,no,2.0,no,0.0,1.541493,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
 Male,23.285553,1.717775,85.312639,yes,yes,2.951591,3.0,Sometimes,no,2.971557,no,0.0,0.947192,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Obesity_Type_I,Male
-Male,23.0,1.791867,90.0,yes,yes,2.067817,3.0,Sometimes,no,1.082084,no,0.0,1.922364,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_I,Male
+Male,23.0,1.791867,90.0,yes,yes,2.067817,3.0,Sometimes,no,1.082084,no,0.0,1.922364,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
 Female,25.19291,1.7,80.749657,yes,yes,2.54527,3.0,Sometimes,no,2.269564,no,0.503122,1.0,Frequently,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Female
 Male,34.389906,1.68108,83.568035,yes,yes,2.0,1.660768,Sometimes,no,2.482294,no,0.891205,0.0,no,Automobile,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
 Female,26.595893,1.660756,78.574786,yes,yes,2.0,2.597608,Sometimes,no,2.0,no,0.0,0.434198,Frequently,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Female
@@ -1009,7 +1009,7 @@ Male,31.426573,1.848683,99.0,yes,yes,2.759286,2.59257,Sometimes,no,2.549617,no,1
 Male,34.288249,1.835678,96.01851,yes,yes,2.0,1.546665,Sometimes,no,3.0,no,1.0,0.0,Sometimes,Automobile,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
 Female,18.863875,1.560029,71.728069,yes,no,3.0,3.339914,Sometimes,no,2.0,no,1.0,1.0,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Female
 Female,18.951144,1.621048,72.105856,yes,no,3.0,3.884861,Sometimes,no,2.0,no,1.0,1.0,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Female
-Male,19.671876,1.699474,78.0,yes,no,1.925064,2.358298,Sometimes,no,2.774043,no,0.0,0.133566,no,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Obesity_Type_I,Male
+Male,19.671876,1.699474,78.0,yes,no,1.925064,2.358298,Sometimes,no,2.774043,no,0.0,0.133566,no,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
 Male,50.832559,1.745528,82.130728,yes,yes,2.0,3.0,Sometimes,no,1.774778,no,0.943266,0.0,no,Automobile,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
 Male,17.971574,1.720379,85.0,yes,yes,2.0,3.0,Sometimes,no,2.802498,no,1.0,0.41758,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
 Male,18.0,1.758787,85.050558,yes,yes,2.846981,3.0,Sometimes,no,2.87781,no,1.0,0.429081,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
@@ -1158,7 +1158,7 @@ Male,19.684891,1.700627,78.048207,yes,no,1.653081,2.753418,Sometimes,no,2.192063
 Male,47.7061,1.743935,84.729197,yes,yes,2.535315,3.0,Sometimes,no,1.146595,no,0.31381,0.0,no,Automobile,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
 Male,17.997009,1.742654,85.0,yes,no,2.0,3.0,Sometimes,no,2.976229,no,1.0,0.121992,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
 Male,17.971786,1.754441,85.002884,yes,yes,2.765769,3.0,Sometimes,no,2.845134,no,1.0,0.42683,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
-Male,20.432717,1.719342,80.790813,yes,yes,2.215464,2.116195,Sometimes,no,1.80996,no,1.910577,0.971746,no,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
+Male,20.432717,1.719342,80.790813,yes,yes,2.215464,2.116195,Sometimes,no,1.80996,no,1.910577,0.971746,no,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Obesity_Type_I,Male
 Female,33.954433,1.682253,77.431678,yes,yes,3.0,2.049908,Sometimes,no,1.999882,no,1.637368,0.10724,no,Automobile,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Female
 Male,17.039058,1.799902,95.419668,yes,yes,2.0,3.0,Sometimes,no,3.0,no,1.04729,0.933802,Sometimes,Public_Transportation,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
 Male,33.070142,1.709428,83.014033,yes,yes,2.0,1.044628,Sometimes,no,2.01051,no,2.805801,0.0,no,Automobile,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Overweight_Level_II,Male
@@ -1204,7 +1204,7 @@ Male,22.754646,1.734237,95.0,yes,yes,2.0,3.0,Sometimes,no,2.287248,no,2.669179,1
 Male,23.252906,1.775815,97.813023,yes,yes,2.0,3.0,Sometimes,no,3.0,no,3.0,2.0,no,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Male
 Female,22.025438,1.640426,87.344156,yes,yes,3.0,1.0,Sometimes,no,3.0,no,1.280924,1.77795,no,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Female
 Female,18.086772,1.65,82.13682,yes,yes,3.0,3.0,Sometimes,no,1.0,no,1.02975,1.350099,Sometimes,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Female
-Male,25.994393,1.753321,107.998815,yes,yes,3.0,3.0,Sometimes,no,1.776991,no,1.757724,0.0,Sometimes,Automobile,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Insufficient_Weight,Male
+Male,25.994393,1.753321,107.998815,yes,yes,3.0,3.0,Sometimes,no,1.776991,no,1.757724,0.0,Sometimes,Automobile,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Male
 Female,40.821515,1.553026,77.74518,yes,yes,2.0,3.0,Sometimes,no,1.406115,no,0.0,0.0,Sometimes,Automobile,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Female
 Male,23.0,1.706525,90.500055,yes,yes,2.0,3.0,Sometimes,no,1.530493,no,0.967627,1.0,no,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Male
 Female,37.955371,1.560648,80.0,yes,yes,2.846452,1.139317,Sometimes,no,1.459511,no,1.71807,0.0,Sometimes,Automobile,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Female
@@ -1314,7 +1314,7 @@ Female,22.884722,1.622787,82.0,yes,yes,1.754401,1.0,Sometimes,no,2.0,no,0.0,0.30
 Male,18.729566,1.855433,112.875283,yes,yes,2.0,2.427137,Sometimes,no,2.574073,no,1.0,2.0,Sometimes,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Male
 Male,21.011124,1.856315,118.183797,yes,yes,2.0,3.0,Sometimes,no,3.0,no,0.788585,1.220029,Sometimes,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Male
 Female,18.603496,1.681719,90.671871,yes,yes,1.524428,3.0,Sometimes,no,1.383831,no,0.130417,1.0,Sometimes,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Female
-Female,21.106056,1.722884,92.949254,yes,yes,1.164062,3.0,Sometimes,no,1.157395,no,0.0,0.320851,Sometimes,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Female
+Female,21.106056,1.722884,92.949254,yes,yes,1.164062,3.0,Sometimes,no,1.157395,no,0.0,0.320851,Sometimes,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Overweight_Level_I,Female
 Male,23.0,1.799406,106.528811,yes,yes,2.123159,3.0,Sometimes,no,2.415343,no,0.295178,0.569852,Sometimes,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Overweight_Level_II,Male
 Male,21.980847,1.819875,106.048516,yes,yes,2.0,3.0,Sometimes,no,2.745242,no,0.0,0.80898,Sometimes,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Male
 Male,21.016665,1.790172,105.042194,yes,yes,2.259679,3.0,Sometimes,no,1.026143,no,0.268801,0.077818,Sometimes,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Male
@@ -1339,7 +1339,7 @@ Male,29.622804,1.814052,109.411622,yes,yes,2.407817,2.070033,Sometimes,no,1.7962
 Male,30.79626,1.789421,109.599453,yes,yes,2.21498,2.282392,Sometimes,no,1.179942,no,1.771754,0.537659,Sometimes,Automobile,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Male
 Female,18.0,1.686904,90.004046,yes,yes,2.737149,3.0,Sometimes,no,1.997195,no,1.352663,0.468483,Sometimes,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Female
 Female,18.107092,1.703259,91.499683,yes,yes,1.899793,3.0,Sometimes,no,1.439962,no,0.9529,0.838847,Sometimes,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Female
-Male,31.335093,1.665798,89.738596,yes,yes,2.274164,1.049534,Sometimes,no,1.358172,no,1.482411,0.0,Sometimes,Automobile,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Overweight_Level_II,Male
+Male,31.335093,1.665798,89.738596,yes,yes,2.274164,1.049534,Sometimes,no,1.358172,no,1.482411,0.0,Sometimes,Automobile,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Male
 Male,29.0,1.66671,89.048151,yes,yes,1.897796,3.0,Sometimes,no,1.193039,no,0.011519,0.0,Sometimes,Automobile,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Male
 Female,18.011903,1.65,84.210535,yes,yes,2.85916,3.0,Sometimes,no,1.0,no,1.020525,0.786066,no,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Female
 Female,18.0,1.649439,84.897738,yes,yes,2.0,3.0,Sometimes,no,1.039313,no,1.0,0.0,no,Public_Transportation,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Obesity_Type_I,Female
