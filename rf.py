@@ -22,9 +22,6 @@ setups = [
     ['demographic_parity', 'macro'], ['demographic_parity', 'micro']
 ]
 
-# List to hold the stats from each balancing run
-stats = []
-
 '''Part 1: Drug use data'''
 # Loading the data
 drugs = pd.read_csv('data/source/drugs.csv')
@@ -113,7 +110,7 @@ X = pd.concat([X_cat, obesity[num_cols].round()], axis=1)
 y = weight_class
 
 # Running the random forest
-rf = RandomForestClassifier(n_jobs=-1, 
+rf = RandomForestClassifier(n_jobs=-1,
                             n_estimators=1000, 
                             oob_score=True)
 rf.fit(X, y)
@@ -165,8 +162,7 @@ y = passed
 # Running the random forest
 rf = RandomForestClassifier(n_jobs=-1, 
                             n_estimators=1000, 
-                            oob_score=True,
-                            class_weight='balanced')
+                            oob_score=True)
 rf.fit(X, y)
 probs = rf.oob_decision_function_
 prob_args = np.argmax(probs, axis=1)

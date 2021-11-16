@@ -104,9 +104,9 @@ class BinaryBalancer:
             a = data[a].values
             
         # Setting the targets
-        self.__y = y
-        self.__y_ = y_
-        self.__a = a
+        self.y = y
+        self.y_ = y_
+        self.a = a
         self.rocs = None
         self.roc = None
         self.con = None
@@ -133,15 +133,15 @@ class BinaryBalancer:
                 for g, cut in enumerate(self.cuts):
                     probs[group_ids[g]] = tools.threshold(probs[group_ids[g]],
                                                           cut)
-                self.__y_ = probs.astype(np.uint8)
+                self.y_ = probs.astype(np.uint8)
         
         # Calcuating the groupwise classification rates
-        self.__gr_list = [tools.CLFRates(self.__y[i], self.__y_[i]) 
+        self.__gr_list = [tools.CLFRates(self.y[i], self.y_[i]) 
                          for i in group_ids]
         self.group_rates = dict(zip(self.groups, self.__gr_list))
         
         # And then the overall rates
-        self.overall_rates = tools.CLFRates(self.__y, self.__y_)
+        self.overall_rates = tools.CLFRates(self.y, self.y_)
         
         if summary:
             self.summary(adj=False)
@@ -252,13 +252,13 @@ class BinaryBalancer:
         self.pya = self.opt.x.reshape(len(self.groups), 2)
         
         # Setting the adjusted predictions
-        self.y_adj = tools.pred_from_pya(y_=self.__y_, 
-                                         a=self.__a,
+        self.y_adj = tools.pred_from_pya(y_=self.y_, 
+                                         a=self.a,
                                          pya=self.pya, 
                                          binom=binom)
         
         # Getting theoretical (no rounding) and actual (with rounding) loss
-        self.actual_loss = 1 - tools.CLFRates(self.__y, self.y_adj).acc
+        self.actual_loss = 1 - tools.CLFRates(self.y, self.y_adj).acc
         cmin = self.opt.fun
         tl = cmin + (e*self.overall_rates.nr) + (s*self.overall_rates.pr)
         self.theoretical_loss = tl
@@ -369,9 +369,9 @@ class BinaryBalancer:
         cmap = sns.color_palette(palette, as_cmap=True)
         
         # Plotting the unadjusted ROC coordinates
-        orig_coords = tools.group_roc_coords(self.__y, 
-                                             self.__y_, 
-                                             self.__a)
+        orig_coords = tools.group_roc_coords(self.y, 
+                                             self.y_, 
+                                             self.a)
         sns.scatterplot(x=orig_coords.fpr,
                         y=orig_coords.tpr,
                         hue=self.groups,
@@ -381,9 +381,9 @@ class BinaryBalancer:
         
         # Plotting the adjusted coordinates
         if preds:
-            adj_coords = tools.group_roc_coords(self.__y, 
+            adj_coords = tools.group_roc_coords(self.y, 
                                                 self.y_adj, 
-                                                self.__a)
+                                                self.a)
             sns.scatterplot(x=adj_coords.fpr, 
                             y=adj_coords.tpr,
                             hue=self.groups,
@@ -505,15 +505,15 @@ class BinaryBalancer:
                 Whether to print results for the adjusted predictions.
         """
         if org:
-            org_coords = tools.group_roc_coords(self.__y, self.__y_, self.__a)
+            org_coords = tools.group_roc_coords(self.y, self.y_, self.a)
             org_loss = 1 - self.overall_rates.acc
             print('\nPre-adjustment group rates are \n')
             print(org_coords.to_string(index=False))
             print('\nAnd loss is %.4f\n' %org_loss)
         
         if adj:
-            adj_coords = tools.group_roc_coords(self.__y, self.y_adj, self.__a)
-            adj_loss = 1 - tools.CLFRates(self.__y, self.y_adj).acc
+            adj_coords = tools.group_roc_coords(self.y, self.y_adj, self.a)
+            adj_loss = 1 - tools.CLFRates(self.y, self.y_adj).acc
             print('\nPost-adjustment group rates are \n')
             print(adj_coords.to_string(index=False))
             print('\nAnd loss is %.4f\n' %adj_loss)
@@ -601,8 +601,8 @@ class MulticlassBalancer:
             a = data[a].values
             
         # Setting the targets
-        self.__y = y
-        self.__a = a
+        self.y = y
+        self.a = a
         self.rocs = None
         self.roc = None
         self.con = None
@@ -649,10 +649,10 @@ class MulticlassBalancer:
         self.old_rocs = np.array(old_rocs)
         
         if not preds_are_probs:
-            probs = tools.cat_to_probs(self.__y, 
-                                       self.__a, 
+            probs = tools.cat_to_probs(self.y, 
+                                       self.a, 
                                        self.cp_mats)
-            self.old_brier_score = tools.brier_score(self.__y,
+            self.old_brier_score = tools.brier_score(self.y,
                                                      probs)
         
         if summary:
@@ -914,10 +914,10 @@ class MulticlassBalancer:
                                                 self.cp_mats)
                 self.loss = 1 - np.sum(self.p_vecs * self.rocs[:, :, 1])
                 self.macro_loss = 1 - np.mean(self.rocs[:, :, 1])
-                preds_as_probs = tools.cat_to_probs(self.__y,
-                                                    self.__a, 
+                preds_as_probs = tools.cat_to_probs(self.y,
+                                                    self.a, 
                                                     self.new_cp_mats)
-                self.brier_score = tools.brier_score(self.__y, 
+                self.brier_score = tools.brier_score(self.y, 
                                                      preds_as_probs)
             else:
                 print('\nBalancing failed: Linear program is infeasible.\n')
@@ -928,18 +928,18 @@ class MulticlassBalancer:
             
         else:
             # Getting the predictions with cross validation
-            preds = tools.cv_predict(self.__y,
+            preds = tools.cv_predict(self.y,
                                      self.y_,
-                                     self.__a,
+                                     self.a,
                                      goal=goal,
                                      loss=loss,
                                      shuffle=shuffle,
                                      seed=seed)
             
             # Resetting some class attributes
-            self.__y = preds.y.values
+            self.y = preds.y.values
             self.y_ = preds.y_.values
-            self.__a = preds.a.values
+            self.a = preds.a.values
             self.yt = preds.yt.values
             
             # Getting the new CP matrices for Y~
@@ -947,7 +947,7 @@ class MulticlassBalancer:
             self.m = np.array([tools.cp_mat(self.y_[ids],
                                             self.yt[ids])
                                for ids in group_ids])
-            self.new_cp_mats = np.array([tools.cp_mat(self.__y[ids],
+            self.new_cp_mats = np.array([tools.cp_mat(self.y[ids],
                                                       self.yt[ids])
                                          for ids in group_ids])
             
@@ -958,9 +958,9 @@ class MulticlassBalancer:
             self.loss = 1 - np.sum(self.p_vecs * self.rocs[:, :, 1])
             self.macro_loss = 1 - np.mean(self.rocs[:, :, 1])
             preds_as_probs = tools.cat_to_probs(self.y_,
-                                                self.__a, 
+                                                self.a, 
                                                 self.m)
-            self.brier_score = tools.brier_score(self.__y, 
+            self.brier_score = tools.brier_score(self.y, 
                                                  preds_as_probs)
             
         if summary:
@@ -1130,6 +1130,8 @@ class MulticlassBalancer:
                round=4,
                summary=False,
                cv=False,
+               shuffle=False,
+               seed=None,
                n_folds=5):
         """Adjusts predictions to satisfy a fairness constraint.
         
@@ -1250,9 +1252,9 @@ class MulticlassBalancer:
                 self.loss = 1 - np.sum(self.p_vecs * self.rocs[:, :, 1])
                 self.macro_loss = 1 - np.mean(self.rocs[:, :, 1])
                 preds_as_probs = tools.cat_to_probs(self.y_,
-                                                    self.__a, 
+                                                    self.a, 
                                                     self.m)
-                self.brier_score = tools.brier_score(self.__y, 
+                self.brier_score = tools.brier_score(self.y, 
                                                      preds_as_probs)
             else:
                 print('\nBalancing failed: Linear program is infeasible.\n')
@@ -1262,18 +1264,18 @@ class MulticlassBalancer:
         
         else:
             # Getting the predictions with cross validation
-            preds = tools.cv_predict(self.__y,
+            preds = tools.cv_predict(self.y,
                                      self.y_,
-                                     self.__a,
+                                     self.a,
                                      goal=goal,
                                      loss=loss,
                                      shuffle=shuffle,
                                      seed=seed)
             
             # Resetting some class attributes
-            self.__y = preds.y.values
+            self.y = preds.y.values
             self.y_ = preds.y_.values
-            self.__a = preds.a.values
+            self.a = preds.a.values
             self.yt = preds.yt.values
             
             # Getting the new CP matrices for Y~
@@ -1281,7 +1283,7 @@ class MulticlassBalancer:
             self.m = np.array([tools.cp_mat(self.y_[ids],
                                             self.yt[ids])
                                for ids in group_ids])
-            self.new_cp_mats = np.array([tools.cp_mat(self.__y[ids],
+            self.new_cp_mats = np.array([tools.cp_mat(self.y[ids],
                                                       self.yt[ids])
                                          for ids in group_ids])
             
@@ -1292,9 +1294,9 @@ class MulticlassBalancer:
             self.loss = 1 - np.sum(self.p_vecs * self.rocs[:, :, 1])
             self.macro_loss = 1 - np.mean(self.rocs[:, :, 1])
             preds_as_probs = tools.cat_to_probs(self.y_,
-                                                self.__a, 
+                                                self.a, 
                                                 self.m)
-            self.brier_score = tools.brier_score(self.__y, 
+            self.brier_score = tools.brier_score(self.y, 
                                                  preds_as_probs)
             
         if summary:
@@ -1430,9 +1432,9 @@ class MulticlassBalancer:
         
         # Plotting the adjusted coordinates
         if preds:
-            adj_coords = tools.group_roc_coords(self.__y, 
+            adj_coords = tools.group_roc_coords(self.y, 
                                                 self.y_adj, 
-                                                self.__a)
+                                                self.a)
             sns.scatterplot(x=adj_coords.fpr, 
                             y=adj_coords.tpr,
                             hue=self.groups,
