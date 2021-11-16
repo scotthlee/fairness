@@ -1,7 +1,8 @@
 import numpy as np
-import pickle
 import pandas as pd
 import argparse
+import pickle
+import os
 
 from itertools import permutations, combinations
 from importlib import reload
@@ -106,9 +107,12 @@ if __name__ == '__main__':
             #rocs_23 = [[r['old_rocs'], r['new_rocs']] for r in res]
             df = pd.concat([r['stats'] for r in res], axis=0)
             df['n_groups'] = 2
-            df.to_csv('data/exp_stats.csv', mode='a', index=False)
-    
-    #stats_23 = pd.concat(stats_23, axis=0)
+            
+            if 'exp_stats.csv' in os.listdir():
+                mode = 'a'
+            else: mode = 'w'
+            
+            df.to_csv('data/exp_stats.csv', mode=mode, index=False)
     
     # Setting up a 3-group 3-group problem
     bias_types = ['low_one', 'medium_one', 'high_one',

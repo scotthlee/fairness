@@ -1251,6 +1251,7 @@ def balancing_stats(b, cv=False):
     old_acc = np.dot(b.p_y, np.diag(b.cp_mat))
     if status == 0:
         # Getting loss and other basic metrics
+        n = b.y_.shape[0]
         new_acc = 1 - b.loss
         acc_diff = (new_acc - old_acc) / old_acc
         new_rocs = b.rocs
@@ -1288,13 +1289,15 @@ def balancing_stats(b, cv=False):
             trivial = 0
     
     # Bundling things up
-    out_df = pd.DataFrame([old_acc, new_acc,
+    out_df = pd.DataFrame([n, old_acc, new_acc,
                            acc_diff, old_mean, new_mean, 
                            mean_diff, rel_mean_diff, max_diff,
                            rel_max_diff]).transpose()
-    out_df.columns = ['old_acc', 'new_acc', 'acc_diff', 
-                      'old_mean_tpr', 'new_mean_tpr', 'mean_tpr_diff', 
-                      'rel_mean_tpr_diff', 'max_tpr_diff', 'rel_max_tpr_diff']
+    out_df.columns = [
+        'n', 'old_acc', 'new_acc', 'acc_diff', 
+        'old_mean_tpr', 'new_mean_tpr', 'mean_tpr_diff', 
+        'rel_mean_tpr_diff', 'max_tpr_diff', 'rel_max_tpr_diff'
+    ]
     
     return out_df
 
@@ -1304,83 +1307,42 @@ def fd_grid(b,
             goal='odds',
             step=0.01,
             max=1.0,
-            absval=True):
-    '''Returns a grid of slack-vs.-loss metrics for making F-D plots'''
-    micro_losses = []
-    macro_losses = []
-    brier_scores = []
-    mean_tpr_diffs = []
-    mean_j_diffs = []
-    max_acc_diffs = []
-    max_parity_diffs = []
-    max_cp_diffs = []
+            absval=True,
+            cv=False,
+            shuffle=False,
+            seed=None):
+    '''Returns a grid of slack-vs.-loss metrics for making F-D plots.
+    '''
+    out = []
+    max_ineqs = np.arange(0, max + step, step)
     
-    slacks = np.arange(0, max + step, step)
-    for s in slacks:
-        # Adjusting and pulling out the basic info
-        b.adjust_new(goal=goal, loss=loss, slack=s)
-        rocs = b.rocs
-        p_y_a = b.p_y_a
-        
-        # Getting combinations of groups for pairwise comparisons
-        combos = list(combinations(range(b.n_groups), 2))
-        tpr_diffs = []
-        fpr_diffs = []
-        j_diffs = []
-        acc_diffs = []
-        parity_diffs = []
-        cp_diffs = []
-        
-        for c in combos:
-            tprs = rocs[c, :, 1]
-            fprs = rocs[c, :, 0]
-            js = tprs + (1 - fprs) - 1
-            accs = np.array([np.dot(p_y_a[i],
-                                    tprs[i])
-                             for i in c])
-            counts = np.array([np.dot(p_y_a[i],
-                                      b.new_cp_mats[i])
-                               for i in c])
-            cp_diffs.append(np.abs(np.diff(b.new_cp_mats,
-                                           axis=0)).mean())
-            tpr_diffs.append(np.abs(np.diff(tprs, axis=0)).mean())
-            j_diffs.append(np.abs(np.diff(js, axis=0)).mean())
-            acc_diffs.append(np.abs(np.diff(accs)[0]))
-            parity_diffs.append(np.abs(np.diff(counts, axis=0)).mean())
-        
-        micro_losses.append(b.loss)
-        macro_losses.append(b.macro_loss)
-        brier_scores.append(b.brier_score)
-        mean_tpr_diffs.append(np.max(tpr_diffs))
-        mean_j_diffs.append(np.max(j_diffs))
-        max_acc_diffs.append(np.max(acc_diffs))
-        max_parity_diffs.append(np.max(parity_diffs))
-        max_cp_diffs.append(np.max(cp_diffs))
+    # Getting the grid of post-adjustment values
+    for m in max_ineqs:
+        b.adjust_new(goal=goal,
+                     loss=loss, 
+                     slack=m,
+                     cv=cv,
+                     shuffle=shuffle,
+                     seed=seed)
+        out.append(fd_point(b))
     
-    out = pd.DataFrame([
-        slacks, micro_losses, macro_losses,
-        brier_scores, max_acc_diffs, mean_tpr_diffs, 
-        mean_j_diffs, max_parity_diffs,
-        max_cp_diffs
-    ]).transpose()
-    
-    out.columns = [
-        'slack', 'micro_loss', 'macro_loss',
-        'brier_score', 'max_acc_diff', 'max_mean_tpr_diff',
-        'max_mean_j_diff', 'max_mean_parity_diff', 'max_mean_cp_diff'
-    ]
+    out = pd.concat(out, axis=0)
+    out['max_ineq'] = max_ineqs
     out['adj'] = 1
-    point = fd_point(b)
+    
+    # Getting the pre-adjustment values
+    point = fd_point(b, new=False)
     point['adj'] = 0
     out = pd.concat([out, point], axis=0)
     
     return out
 
 
-def fd_point(b):
+def fd_point(b, new=True):
     '''Returns a single point for the unadjusted fairness vs.
-    discrimination for a predictor
-    '''    
+    discrimination for a predictor.
+    '''   
+    # Setting things up 
     p_y_a = b.p_y_a
     combos = list(combinations(range(b.n_groups), 2))
     tpr_diffs = []
@@ -1390,17 +1352,27 @@ def fd_point(b):
     parity_diffs = []
     cp_diffs = []
     
+    # Deciding whether to use pre- or post-adjustment values
+    if new:
+        rocs = b.rocs
+        cp_mats = b.new_cp_mats
+        brier_score = b.brier_score
+    else:
+        rocs = b.old_rocs
+        cp_mats = b.cp_mats
+        brier_score = b.old_brier_score
+    
     for c in combos:
-        tprs = b.old_rocs[c, :, 1]
-        fprs = b.old_rocs[c, :, 0]
+        tprs = rocs[c, :, 1]
+        fprs = rocs[c, :, 0]
         js = tprs + (1 - fprs) - 1
         accs = np.array([np.dot(p_y_a[i],
                                 tprs[i])
                          for i in c])
         counts = np.array([np.dot(p_y_a[i],
-                                  b.cp_mats[i])
+                                  cp_mats[i])
                            for i in c])
-        cp_diffs.append(np.abs(np.diff(b.new_cp_mats,
+        cp_diffs.append(np.abs(np.diff(cp_mats,
                                        axis=0)).mean())
         tpr_diffs.append(np.abs(np.diff(tprs, axis=0)).mean())
         j_diffs.append(np.abs(np.diff(js, axis=0)).mean())
@@ -1412,9 +1384,8 @@ def fd_point(b):
     acc_diff = np.max(acc_diffs)
     parity_diff = np.max(parity_diffs)
     cp_diff = np.max(cp_diffs)
-    macro = 1 - b.old_rocs[:, :, 1].mean()
-    micro = 1 - np.dot(b.p_y, np.diag(b.cp_mat))
-    brier_score = b.old_brier_score
+    macro = 1 - rocs[:, :, 1].mean()
+    micro = 1 - np.sum(b.p_vecs * rocs[:, :, 1])
     out = pd.DataFrame([micro, macro, brier_score,
                         acc_diff, tpr_diff, j_diff, 
                         parity_diff, cp_diff]).transpose()
@@ -1490,6 +1461,8 @@ def cv_predict(y, y_, a,
                stratify=None,
                shuffle=False,
                seed=None):
+    '''Gets post-adjustment values from cross-validation.
+    '''
     kf = KFold(n_splits=n_folds,
                shuffle=shuffle,
                random_state=seed)

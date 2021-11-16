@@ -33,9 +33,7 @@ for i, ds in enumerate(datasets):
     pop_stats.append(tools.balancing_stats(b))
     b.adjust(goal='strict',
              loss='macro',
-             cv=True,
-             shuffle=True,
-             seed=2021)
+             cv=True)
     cv_stats.append(tools.balancing_stats(b))
 
 pop_df = pd.concat(pop_stats, axis=0)
