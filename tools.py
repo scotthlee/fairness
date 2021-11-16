@@ -1307,6 +1307,7 @@ def fd_grid(b,
             goal='odds',
             step=0.01,
             max=1.0,
+            round=2,
             absval=True,
             cv=False,
             shuffle=False,
@@ -1316,7 +1317,6 @@ def fd_grid(b,
     out = []
     max_ineqs = np.arange(0, max + step, step)
     
-    # Getting the grid of post-adjustment values
     for m in max_ineqs:
         b.adjust_new(goal=goal,
                      loss=loss, 
@@ -1327,6 +1327,7 @@ def fd_grid(b,
         out.append(fd_point(b))
     
     out = pd.concat(out, axis=0)
+    
     out['max_ineq'] = max_ineqs
     out['adj'] = 1
     

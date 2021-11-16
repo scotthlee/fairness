@@ -1544,7 +1544,7 @@ class MulticlassBalancer:
                               linewidths=0.5)'''
                     ax.scatter(x=roc_dfs[i].fpr,
                                y=roc_dfs[i].tpr,
-                               color=cmap[i],
+                               color=cmap[:self.n_groups],
                                marker='x',
                                s=30)
         
