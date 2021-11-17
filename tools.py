@@ -1374,26 +1374,34 @@ def fd_point(b, new=True):
                                   cp_mats[i])
                            for i in c])
         cp_diffs.append(np.abs(np.diff(cp_mats,
-                                       axis=0)).mean())
-        tpr_diffs.append(np.abs(np.diff(tprs, axis=0)).mean())
-        j_diffs.append(np.abs(np.diff(js, axis=0)).mean())
+                                       axis=0)))
+        tpr_diffs.append(np.abs(np.diff(tprs, axis=0)))
+        j_diffs.append(np.abs(np.diff(js, axis=0)))
         acc_diffs.append(np.abs(np.diff(accs)[0]))
-        parity_diffs.append(np.abs(np.diff(counts, axis=0)).mean())
+        parity_diffs.append(np.abs(np.diff(counts, axis=0)))
     
-    tpr_diff = np.max(tpr_diffs)
-    j_diff = np.max(j_diffs)
-    acc_diff = np.max(acc_diffs)
-    parity_diff = np.max(parity_diffs)
-    cp_diff = np.max(cp_diffs)
-    macro = 1 - rocs[:, :, 1].mean()
-    micro = 1 - np.sum(b.p_vecs * rocs[:, :, 1])
+    tpr = np.max([a.max() for a in tpr_diffs])
+    mean_tpr = np.mean([a.mean() for a in tpr_diffs])
+    j = np.max([a.max() for a in j_diffs])
+    mean_j = np.max([a.mean() for a in j_diffs])
+    acc = np.max([a.max() for a in acc_diffs])
+    mean_acc = np.max([a.mean() for a in acc_diffs])
+    parity = np.max([a.max() for a in parity_diffs])
+    mean_parity = np.max([a.mean() for a in parity_diffs])
+    cp = np.max([a.max() for a in cp_diffs])
+    mean_cp = np.mean([a.mean() for a in cp_diffs])
+    macro = b.macro_loss
+    micro = b.loss
     out = pd.DataFrame([micro, macro, brier_score,
-                        acc_diff, tpr_diff, j_diff, 
-                        parity_diff, cp_diff]).transpose()
+                        acc, mean_acc, tpr,
+                        mean_tpr, j, mean_j,
+                        parity, mean_parity, cp,
+                        mean_cp]).transpose()
     out.columns = [
-        'macro_loss', 'micro_loss', 'brier_score',
-        'max_acc_diff', 'max_mean_tpr_diff', 'max_mean_j_diff', 
-        'max_mean_parity_diff', 'max_mean_cp_diff'
+        'micro_loss', 'macro_loss', 'brier_score',
+        'acc', 'mean_acc', 'tpr', 'mean_tpr',
+        'j', 'mean_j', 'parity', 'mean_parity',
+        'cp', 'mean_cp'
     ]
     return out
 
@@ -1411,18 +1419,18 @@ def fd_plot(grid,
     
     # Setting the measure of fairness for the x-axis
     if 'opportunity' in goal:
-        x = grid.max_mean_tpr_diff.values
+        x = grid.mean_tpr.values
         x_name = 'max mean TPR diff'
     elif 'odds' in goal:
-        x = grid.max_mean_j_diff.values
+        x = grid.mean_j.values
         x_name = 'max mean J diff'
     elif 'acc' in goal:
-        x = grid.max_acc_diff.values
+        x = grid.acc.values
         x_name = 'max accuracy diff'
     elif 'parity' in goal:
-        x = grid.max_mean_parity_diff.values
+        x = grid.mean_parity.values
     elif 'strict' in goal:
-        x = grid.max_mean_cp_diff.values
+        x = grid.mean_cp.values
     
     # Setting the measure of discrimination for the y-axis
     if disc == 'micro':

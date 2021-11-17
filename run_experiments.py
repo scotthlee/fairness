@@ -233,7 +233,10 @@ if __name__ == '__main__':
             #rocs_33 = [[r['old_rocs'], r['new_rocs']] for r in res]
             df = pd.concat([r['stats'] for r in res], axis=0)
             df['n_groups'] = 3
-            df.to_csv('data/exp_stats.csv', mode='a', index=False)
+            df.to_csv('data/exp_stats.csv', 
+                      mode='a', 
+                      header=False,
+                      index=False)
     
     #stats_33 = pd.concat(stats_33, axis=0)
     

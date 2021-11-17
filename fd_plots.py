@@ -60,5 +60,8 @@ for i, ds in enumerate(df_names):
     plt.setp(axes[0, i], title=ds)
 
 fig.set_tight_layout(True)
-plt.suptitle('Fairness vs. discrimination')
+fig.suptitle('Fairness vs. discrimination')
+fig.supxlabel('Maximum difference in fairness between any 2 groups')
+fig.supylabel('Brier score')
+
 plt.show()

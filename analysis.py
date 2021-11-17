@@ -30,11 +30,18 @@ for i, ds in enumerate(datasets):
                                      ds.a.values)
     b.adjust(goal='strict',
              loss='macro')
-    pop_stats.append(tools.balancing_stats(b))
+    stats = tools.balancing_stats(b)
+    stats = pd.concat([stats, tools.fd_point(b)],
+                      axis=1)
+    pop_stats.append(stats)
+    
     b.adjust(goal='strict',
              loss='macro',
              cv=True)
-    cv_stats.append(tools.balancing_stats(b))
+    stats = tools.balancing_stats(b)
+    stats = pd.concat([stats, tools.fd_point(b)],
+                      axis=1)
+    cv_stats.append(stats)
 
 pop_df = pd.concat(pop_stats, axis=0)
 pop_df['dataset'] = df_names
