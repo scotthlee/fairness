@@ -1241,7 +1241,7 @@ def cp_mat_summary(b, slim=True, title=None, round=2):
     return pd.concat(out, axis=1)
 
 
-def balancing_stats(b, cv=False):
+def balancing_stats(b, cv=False, cols=None):
     # Kludgy workaround for cross-validated predictions
     if not cv:
         status = b.opt.status
@@ -1249,6 +1249,8 @@ def balancing_stats(b, cv=False):
         status = 0
     
     old_acc = np.dot(b.p_y, np.diag(b.cp_mat))
+    n_params = np.product(b.m.shape)
+    
     if status == 0:
         # Getting loss and other basic metrics
         n = b.y_.shape[0]
@@ -1289,15 +1291,19 @@ def balancing_stats(b, cv=False):
             trivial = 0
     
     # Bundling things up
-    out_df = pd.DataFrame([n, old_acc, new_acc,
+    out_df = pd.DataFrame([n, n_params, old_acc, new_acc,
                            acc_diff, old_mean, new_mean, 
                            mean_diff, rel_mean_diff, max_diff,
                            rel_max_diff]).transpose()
     out_df.columns = [
-        'n', 'old_acc', 'new_acc', 'acc_diff', 
-        'old_mean_tpr', 'new_mean_tpr', 'mean_tpr_diff', 
-        'rel_mean_tpr_diff', 'max_tpr_diff', 'rel_max_tpr_diff'
+        'n', 'n_params', 'old_acc', 
+        'new_acc', 'rel_acc_diff', 'old_mean_tpr', 
+        'new_mean_tpr', 'mean_tpr_diff', 'rel_mean_tpr_diff', 
+        'max_tpr_diff', 'rel_max_tpr_diff'
     ]
+    
+    if cols:
+        out_df = out_df[cols]
     
     return out_df
 
@@ -1339,7 +1345,7 @@ def fd_grid(b,
     return out
 
 
-def fd_point(b, new=True):
+def fd_point(b, new=True, cols=None):
     '''Returns a single point for the unadjusted fairness vs.
     discrimination for a predictor.
     '''   
@@ -1390,8 +1396,10 @@ def fd_point(b, new=True):
     mean_parity = np.max([a.mean() for a in parity_diffs])
     cp = np.max([a.max() for a in cp_diffs])
     mean_cp = np.mean([a.mean() for a in cp_diffs])
+    
     macro = b.macro_loss
     micro = b.loss
+    
     out = pd.DataFrame([micro, macro, brier_score,
                         acc, mean_acc, tpr,
                         mean_tpr, j, mean_j,
@@ -1403,6 +1411,10 @@ def fd_point(b, new=True):
         'j', 'mean_j', 'parity', 'mean_parity',
         'cp', 'mean_cp'
     ]
+    
+    if cols:
+        out = out[cols]
+    
     return out
 
 

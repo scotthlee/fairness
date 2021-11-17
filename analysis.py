@@ -24,22 +24,34 @@ datasets = [bar, weed, obesity, park]
 pop_stats = []
 cv_stats = []
 
+# Columns to use for balancing_stats and fd_point
+stats_cols = [
+    'n', 'n_params', 'old_acc',
+    'new_acc', 'rel_acc_diff', 'old_mean_tpr',
+    'new_mean_tpr', 'rel_mean_tpr_diff'
+]
+fd_cols = ['cp', 'mean_cp']
+
 for i, ds in enumerate(datasets):
     b = balancers.MulticlassBalancer(ds.y.values,
                                      ds.yhat.values,
                                      ds.a.values)
     b.adjust(goal='strict',
              loss='macro')
-    stats = tools.balancing_stats(b)
-    stats = pd.concat([stats, tools.fd_point(b)],
+    stats = tools.balancing_stats(b, cols=stats_cols)
+    old_point = tools.fd_point(b, False, fd_cols)
+    new_point = tools.fd_point(b, True, fd_cols)
+    stats = pd.concat([stats, old_point, new_point],
                       axis=1)
     pop_stats.append(stats)
     
     b.adjust(goal='strict',
              loss='macro',
              cv=True)
-    stats = tools.balancing_stats(b)
-    stats = pd.concat([stats, tools.fd_point(b)],
+    stats = tools.balancing_stats(b, cols=stats_cols)
+    old_point = tools.fd_point(b, False, fd_cols)
+    new_point = tools.fd_point(b, True, fd_cols)
+    stats = pd.concat([stats, old_point, new_point],
                       axis=1)
     cv_stats.append(stats)
 
