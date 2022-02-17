@@ -1587,7 +1587,7 @@ class MulticlassBalancer:
         
         if adj:
             # Casting the post-adjustment ROC scores as a DF
-            if 'opportunity' in self.goal:
+            if ('opportunity' in self.goal) or ('strict' in self.goal):
                 print('\nPost-adjustment group rates are \n')
                 for i, r in enumerate(self.rocs):
                     print(self.groups[i])
