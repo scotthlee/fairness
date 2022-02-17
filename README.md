@@ -22,7 +22,7 @@ In our [paper](http://ceur-ws.org/Vol-3087/paper_36.pdf) from the SafeAI worksho
 <img src="https://github.com/scotthlee/fairness/blob/master/img/strict goal with macro loss.png" width="1000" height="300">
 
 ### Implementation
-Our implementation use two classes, the `BinaryBalancer` and the `MulticlassBalancer`, to perform their respective adjustments. Initializing a balancer with the true label, the predicted label, and the protected attribute will produce a report with the groupwise true- and false-positive rates. The rest of its functionality comes from a few key methods--see the two classes's [docstrings](balancers/__init__.py) for more info!
+Our implementation use two classes, the `BinaryBalancer` and the `MulticlassBalancer`, to perform their respective adjustments. Initializing a balancer with the true label, the predicted label, and the protected attribute will produce a report with the groupwise true- and false-positive rates. The rest of its functionality comes from the `.adjust()` and `.plot()` methods--see the two classes's [docstrings](balancers/__init__.py) for more info!
 
 ## Data
 For demo purposes, the repository comes with a synthetic dataset, [farm_animals.csv](data/farm_animals.csv), which we created with [data_gen.py](data/data_gen.py). Here are the data elements:
