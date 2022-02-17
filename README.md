@@ -17,7 +17,11 @@ When Y is binary but Y<sub>hat</sub> is continuous, Y<sub>hat</sub> must be thre
 <img src="https://github.com/scotthlee/fairness/blob/master/img/roc_nolines.png" width="400" height="300"><img src="https://github.com/scotthlee/fairness/blob/master/img/roc_lines.png" width="400" height="300">
 
 #### Multiclass outcomes
-In our [paper](http://ceur-ws.org/Vol-3087/paper_36.pdf) from the SafeAI workshop at AAAI 2022, we extend the binary approach above to multiclass outcomes. As before, the solution still uses a linear program to derive the adjusted predictor, but the program's constraints and loss functions change a bit to account for the somewhat expanded definitions of fairness entailed by the added outcome levels. We provide more details on our implementation below, but would encourage those interested to read the paper for more information on the appraoch itself.
+In our [paper](http://ceur-ws.org/Vol-3087/paper_36.pdf) from the SafeAI workshop at AAAI 2022, we extend the binary approach above to multiclass outcomes. As before, the solution still uses a linear program to derive the adjusted predictor, but the program's constraints and loss functions change a bit to account for the somewhat expanded definitions of fairness entailed by the added outcome levels. Our implementation supports the same functions as above, including plotting:
+
+<img src="https://github.com/scotthlee/fairness/blob/master/img/strict goal with macro loss.png" width="400" height="300">
+
+For more information on the technical approach we used, please see the paper.
 
 ### Implementation
 Our implementation use two classes, the `BinaryBalancer` and the `MulticlassBalancer`, to perform their respective adjustments. Initializing a balancer with the true label, the predicted label, and the protected attribute will produce a report with the groupwise true- and false-positive rates. The rest of its functionality comes from a few key methods--see the two classes's [docstrings](balancers/__init__.py) for more info!
