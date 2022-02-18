@@ -17,9 +17,11 @@ When Y is binary but Y<sub>hat</sub> is continuous, Y<sub>hat</sub> must be thre
 <img src="https://github.com/scotthlee/fairness/blob/master/img/roc_nolines.png" width="400" height="300"><img src="https://github.com/scotthlee/fairness/blob/master/img/roc_lines.png" width="400" height="300">
 
 #### Multiclass outcomes
-In our [paper](http://ceur-ws.org/Vol-3087/paper_36.pdf) from the SafeAI workshop at AAAI 2022, we extend the binary approach above to multiclass outcomes. As before, the solution still uses a linear program to derive the adjusted predictor, but the program's constraints and loss functions change a bit to account for the somewhat expanded definitions of fairness entailed by the added outcome levels. Our implementation supports the same functions as above, including plotting:
+In our [paper](http://ceur-ws.org/Vol-3087/paper_36.pdf) from the [SafeAI workshop](https://safeai.webs.upv.es) at AAAI 2022, we extend the binary approach above to multiclass outcomes. As before, the solution still uses a linear program to derive the adjusted predictor, but the program's constraints and loss functions change a bit to account for the somewhat expanded definitions of fairness entailed by the added outcome levels. Our implementation supports the same functions as above, including plotting:
 
 <img src="https://github.com/scotthlee/fairness/blob/master/img/strict goal with macro loss.png" width="1000" height="300">
+
+Notice that in this particular example the optima are not truly optimal--they're a bit inside of the bounding convex hull for each outcome. A good solution can be hard to find when the number of outcomes is high, when there's lots of class imblanace, or when the disparities between groups are particularly strong. We provide a fairly comprehensive look at these different scenarios in our paper.
 
 ### Implementation
 Our implementation use two classes, the `BinaryBalancer` and the `MulticlassBalancer`, to perform their respective adjustments. Initializing a balancer with the true label, the predicted label, and the protected attribute will produce a report with the groupwise true- and false-positive rates. The rest of its functionality comes from the `.adjust()` and `.plot()` methods--see the two classes's [docstrings](balancers/__init__.py) for more info!
