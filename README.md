@@ -1,4 +1,4 @@
-# Algorithmic Fairness in ML
+# Fair classification through linear programming
 ## Introduction
 This repository implements several postprocessing algorithms designed to debias pretrained classifiers. It uses linear programming for everything, including its work with real-valued predictors, and so the bulk of the solving code is an implementation (and extension) of the method presented by Hardt, Price, and Srebro in their [2016 paper](https://arxiv.org/pdf/1610.02413.pdf) on fairness in supervised learning. 
 
@@ -17,10 +17,14 @@ When Y is binary but Y<sub>hat</sub> is continuous, Y<sub>hat</sub> must be thre
 <img src="https://github.com/scotthlee/fairness/blob/master/img/roc_nolines.png" width="400" height="300"><img src="https://github.com/scotthlee/fairness/blob/master/img/roc_lines.png" width="400" height="300">
 
 #### Multiclass outcomes
-Coming soon!
+In our [paper](http://ceur-ws.org/Vol-3087/paper_36.pdf) from the [SafeAI workshop](https://safeai.webs.upv.es) at AAAI 2022, we extend the binary approach above to multiclass outcomes. As before, the solution still uses a linear program to derive the adjusted predictor, but the program's constraints and loss functions change a bit to account for the somewhat expanded definitions of fairness entailed by the added outcome levels. Our implementation supports the same functions as above, including plotting:
+
+<img src="https://github.com/scotthlee/fairness/blob/master/img/strict goal with macro loss.png" width="1000" height="300">
+
+Notice that in this particular example the optima are not truly optimal--they're a bit inside of the bounding convex hull for one outcome, and a bit outside it for the others. A good solution can be hard to find when the number of outcomes is high, when there's lots of class imblanace, or when the disparities between groups are particularly strong. We provide a fairly comprehensive look at these different scenarios in our paper.
 
 ### Implementation
-Our implementation relies on a single class, the `PredictionBalancer`, to perform the adjustment. Initializing the balancer with the true label, the predicted label, and the protected attribute will produce a report with the groupwise true- and false-positive rates. The rest of its functionality comes from a few key methods--see the class's [docstrings](balancers/__init__.py) for more info!
+Our implementation use two classes, the `BinaryBalancer` and the `MulticlassBalancer`, to perform their respective adjustments. Initializing a balancer with the true label, the predicted label, and the protected attribute will produce a report with the groupwise true- and false-positive rates. The rest of its functionality comes from the `.adjust()` and `.plot()` methods--see the two classes's [docstrings](balancers/__init__.py) for more info!
 
 ## Data
 For demo purposes, the repository comes with a synthetic dataset, [farm_animals.csv](data/farm_animals.csv), which we created with [data_gen.py](data/data_gen.py). Here are the data elements:
@@ -34,7 +38,7 @@ For demo purposes, the repository comes with a synthetic dataset, [farm_animals.
 The distirbution of animals is not entirely realistic--a working sheep farmer, for example, would have a much higher ratio of sheep to herding dogs--but the lower class imbalance makes the demo a bit easier to follow.
 
 ## Demo
-To see the postprocessing algorithms in action, please check out the [demo notebook](demo.ipynb). The notbeook shows off the main features of the `PredictionBalancer` and is the best place to start if you've never worked with these kinds of adjustments before. Please note: The modules in `requirements.txt` must be installed before running.
+To see the postprocessing algorithms in action, please check out the [demo notebook](demo.ipynb). The notbeook shows off the main features of the two `Balancer` classes and is the best place to start if you've never worked with these kinds of adjustments before. Please note: The modules in `requirements.txt` must be installed before running.
 
 ## Citation
 If you use this code for a project, please give us a shout out.
