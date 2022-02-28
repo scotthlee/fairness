@@ -1373,9 +1373,10 @@ def fd_point(b, new=True, cols=None):
         tprs = rocs[c, :, 1]
         fprs = rocs[c, :, 0]
         js = tprs + (1 - fprs) - 1
-        accs = np.array([np.dot(p_y_a[i],
-                                tprs[i])
-                         for i in c])
+        accs = np.array([np.dot(p_y_a[c[0]],
+                                tprs[0]),
+                         np.dot(p_y_a[c[1]],
+                                tprs[1])])
         counts = np.array([np.dot(p_y_a[i],
                                   cp_mats[i])
                            for i in c])
